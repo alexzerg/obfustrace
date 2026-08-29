@@ -5,10 +5,26 @@ import type { FormEvent } from "react";
 
 type ProviderStatus = "checking" | "ready" | "blocked" | "unavailable";
 
+type ExtractedField = {
+  id: string;
+  label: string;
+  value: string;
+  confidence: number;
+  dataType: string;
+  page: number;
+  reviewReasons: string[];
+};
+
 type ExtractionResponse = {
   provider?: string;
   filename?: string;
   receivedAt?: string;
+  summary?: {
+    fieldCount: number;
+    reviewRequiredCount: number;
+    readyCount: number;
+  };
+  fields?: ExtractedField[];
   result?: unknown;
   error?: string;
   message?: string;
@@ -19,6 +35,7 @@ export function DocumentIntake() {
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [response, setResponse] = useState<ExtractionResponse | null>(null);
+  const [confirmedFieldIds, setConfirmedFieldIds] = useState<string[]>([]);
 
   useEffect(() => {
     const controller = new AbortController();
@@ -62,15 +79,44 @@ export function DocumentIntake() {
       });
       const body = (await result.json()) as ExtractionResponse;
       setResponse(body);
+      setConfirmedFieldIds([]);
     } catch {
       setResponse({
         error: "NETWORK_ERROR",
         message: "The extraction request could not reach the server.",
       });
+      setConfirmedFieldIds([]);
     } finally {
       setIsSubmitting(false);
     }
   }
+
+  function updateField(fieldId: string, value: string) {
+    setResponse((current) => {
+      if (!current?.fields) {
+        return current;
+      }
+
+      return {
+        ...current,
+        fields: current.fields.map((field) =>
+          field.id === fieldId ? { ...field, value } : field,
+        ),
+      };
+    });
+    setConfirmedFieldIds((current) => current.filter((id) => id !== fieldId));
+  }
+
+  function toggleFieldConfirmation(fieldId: string) {
+    setConfirmedFieldIds((current) =>
+      current.includes(fieldId)
+        ? current.filter((id) => id !== fieldId)
+        : [...current, fieldId],
+    );
+  }
+
+  const fields = response?.fields ?? [];
+  const allFieldsConfirmed = fields.length > 0 && confirmedFieldIds.length === fields.length;
 
   const statusCopy = {
     checking: { label: "Checking provider", className: "bg-slate-100 text-slate-600" },
@@ -105,6 +151,7 @@ export function DocumentIntake() {
               onChange={(event) => {
                 setFile(event.target.files?.[0] ?? null);
                 setResponse(null);
+                setConfirmedFieldIds([]);
               }}
             />
           </label>
@@ -129,13 +176,78 @@ export function DocumentIntake() {
           ) : null}
 
           {response ? (
-            <div className={`mt-5 rounded-2xl border p-4 ${response.error ? "border-rose-200 bg-rose-50" : "border-emerald-200 bg-emerald-50"}`} aria-live="polite">
-              <p className="font-semibold text-slate-950">{response.error ? response.message : `Extracted ${response.filename ?? "document"}`}</p>
-              {!response.error ? (
-                <details className="mt-3">
-                  <summary className="cursor-pointer text-sm font-semibold text-teal-800">Inspect deterministic JSON output</summary>
-                  <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{JSON.stringify(response.result, null, 2)}</pre>
-                </details>
+            <div className={`mt-5 rounded-2xl border p-4 sm:p-5 ${response.error ? "border-rose-200 bg-rose-50" : "border-emerald-200 bg-emerald-50"}`} aria-live="polite">
+              <p className="font-semibold text-slate-950">{response.error ? response.message : `Nutrient extracted ${response.summary?.fieldCount ?? fields.length} fields from ${response.filename ?? "the document"}`}</p>
+              {!response.error && fields.length > 0 ? (
+                <div className="mt-4">
+                  <div className="flex flex-wrap items-center justify-between gap-3">
+                    <div>
+                      <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-700">Human review queue</h3>
+                      <p className="mt-1 text-xs text-slate-600">{response.summary?.reviewRequiredCount ?? 0} fields were flagged by deterministic checks. Confirm every value before disclosure.</p>
+                    </div>
+                    <span className="rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 shadow-sm ring-1 ring-slate-200">
+                      {confirmedFieldIds.length}/{fields.length} confirmed
+                    </span>
+                  </div>
+
+                  <div className="mt-4 grid gap-3">
+                    {fields.map((field) => {
+                      const isConfirmed = confirmedFieldIds.includes(field.id);
+                      const needsReview = field.reviewReasons.length > 0;
+                      const confidenceClass = field.confidence >= 85
+                        ? "bg-emerald-100 text-emerald-700"
+                        : field.confidence >= 70
+                          ? "bg-amber-100 text-amber-800"
+                          : "bg-rose-100 text-rose-700";
+
+                      return (
+                        <article key={field.id} className={`rounded-2xl border bg-white p-4 ${isConfirmed ? "border-emerald-300" : needsReview ? "border-amber-300" : "border-slate-200"}`}>
+                          <div className="flex flex-wrap items-start justify-between gap-3">
+                            <div>
+                              <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{field.label} · Page {field.page}</p>
+                              <p className="mt-1 text-xs text-slate-400">Detected as {field.dataType}</p>
+                            </div>
+                            <div className="flex items-center gap-2">
+                              {needsReview ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">Needs review</span> : null}
+                              <span className={`rounded-full px-2.5 py-1 text-[11px] font-bold ${confidenceClass}`}>{field.confidence.toFixed(1)}%</span>
+                            </div>
+                          </div>
+
+                          <div className="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center">
+                            <input
+                              aria-label={`Review ${field.label}`}
+                              className="min-h-11 min-w-0 flex-1 rounded-xl border border-slate-300 px-3 text-sm font-semibold text-slate-900 outline-none transition focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                              value={field.value}
+                              onChange={(event) => updateField(field.id, event.target.value)}
+                            />
+                            <button
+                              type="button"
+                              onClick={() => toggleFieldConfirmation(field.id)}
+                              className={`min-h-11 rounded-full px-4 text-sm font-bold transition focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 ${isConfirmed ? "bg-emerald-100 text-emerald-800" : "bg-slate-950 text-white hover:bg-slate-800"}`}
+                            >
+                              {isConfirmed ? "Confirmed" : "Confirm value"}
+                            </button>
+                          </div>
+
+                          {field.reviewReasons.length > 0 ? (
+                            <ul className="mt-3 space-y-1 rounded-xl bg-amber-50 px-3 py-2 text-xs leading-5 text-amber-900">
+                              {field.reviewReasons.map((reason) => <li key={reason}>• {reason}</li>)}
+                            </ul>
+                          ) : null}
+                        </article>
+                      );
+                    })}
+                  </div>
+
+                  {allFieldsConfirmed ? (
+                    <p className="mt-4 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-900">Human review complete. These corrected values are ready for recipient-specific disclosure.</p>
+                  ) : null}
+
+                  <details className="mt-4">
+                    <summary className="cursor-pointer text-sm font-semibold text-teal-800">Inspect raw Nutrient JSON output</summary>
+                    <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{JSON.stringify(response.result, null, 2)}</pre>
+                  </details>
+                </div>
               ) : null}
             </div>
           ) : null}

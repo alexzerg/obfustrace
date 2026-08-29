@@ -18,6 +18,8 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Interactive revoke and 30-minute reissue controls
 - Explicit case-destruction lifecycle
 - Server-only Nutrient DWS extraction boundary
+- Per-field confidence and deterministic review reasons
+- Editable human confirmation before disclosure
 - Downloadable synthetic travel-evidence sample
 - No real identity data or committed credentials
 
@@ -43,13 +45,13 @@ Playwright covers provider readiness, upload error handling, role switching, rev
 
 ## Nutrient DWS
 
-`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response.
+`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. It normalizes every detected field, preserves the provider confidence score, flags suspicious values using deterministic checks, and requires human confirmation before disclosure. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response.
 
-See [`docs/integrations/nutrient-dws.md`](docs/integrations/nutrient-dws.md) for the contract and setup.
+See [`docs/integrations/nutrient-dws.md`](docs/integrations/nutrient-dws.md) for the contract and setup, and [`docs/screenshots/nutrient-human-review.png`](docs/screenshots/nutrient-human-review.png) for the verified review flow.
 
 ## Planned integrations
 
-Document redaction, human review, PDF assembly, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
+Document redaction, PDF assembly, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
 
 ## Safety
 

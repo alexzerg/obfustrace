@@ -20,6 +20,9 @@ Micro-Embassy creates a temporary, secure identity portal for travelers who lose
 - Tailwind CSS
 - Node.js
 - Playwright
+- Nutrient DWS API
+- Document Intelligence
+- OCR
 - GitHub
 - Vercel
 - HTML5
@@ -29,7 +32,7 @@ Micro-Embassy creates a temporary, secure identity portal for travelers who lose
 - Role-Based Access Control
 - Privacy Engineering
 
-Only add sponsor APIs after their integrations execute in the final demo.
+Nutrient DWS is verified with a real Processor API call against the synthetic sample. Only add further sponsor APIs after their integrations execute in the final demo.
 
 ## Try it out
 
