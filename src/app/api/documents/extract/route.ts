@@ -9,9 +9,12 @@ export const runtime = "nodejs";
 
 const MAX_FILE_SIZE = 10 * 1024 * 1024;
 const ALLOWED_TYPES = new Set([
+  "application/msword",
   "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
   "image/jpeg",
   "image/png",
+  "image/tiff",
   "image/webp",
 ]);
 
@@ -53,7 +56,7 @@ export async function POST(request: Request) {
     return Response.json(
       {
         error: "UNSUPPORTED_DOCUMENT_TYPE",
-        message: "Upload a PDF, JPEG, PNG, or WebP document.",
+        message: "Upload a PDF, DOC, DOCX, JPEG, PNG, TIFF, or WebP document.",
       },
       { status: 415 },
     );

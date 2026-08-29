@@ -1,5 +1,4 @@
-import { CaseDashboard } from "./case-dashboard";
-import { DocumentIntake } from "./document-intake";
+import { EmergencyDemo } from "./emergency-demo";
 
 const principles = [
   {
@@ -29,8 +28,8 @@ export default function Home() {
         </a>
         <div className="flex items-center gap-3">
           <span className="hidden text-sm text-slate-600 sm:inline">Synthetic crisis demo</span>
-          <a href="#case" className="rounded-full bg-white px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700">
-            Open case
+          <a href="#start" className="rounded-full bg-white px-4 py-2 text-sm font-semibold shadow-sm ring-1 ring-slate-200 transition hover:bg-slate-50 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700">
+            Start recovery
           </a>
         </div>
       </header>
@@ -49,8 +48,8 @@ export default function Home() {
             Lose your documents abroad without losing control of your identity. Micro-Embassy gives police, hotels, airlines, and consulates only the evidence they need — then disappears.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
-            <a href="#case" className="inline-flex min-h-12 items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950">
-              Explore the emergency case
+            <a href="#start" className="inline-flex min-h-12 items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950">
+              Start an emergency case
             </a>
             <span className="inline-flex min-h-12 items-center justify-center rounded-full border border-slate-300 bg-white/60 px-5 text-sm font-semibold text-slate-600">
               No real identity data used
@@ -74,8 +73,7 @@ export default function Home() {
         </aside>
       </section>
 
-      <DocumentIntake />
-      <CaseDashboard />
+      <EmergencyDemo />
 
       <section className="border-t border-slate-300/70 bg-slate-950 text-white">
         <div className="mx-auto grid w-full max-w-[1440px] gap-8 px-5 py-12 sm:px-8 md:grid-cols-[1fr_auto] md:items-end lg:px-10">

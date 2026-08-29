@@ -12,7 +12,10 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 
 ## Current vertical slice
 
-- Synthetic lost-passport case in Barcelona
+- Empty-state guided workflow instead of a preloaded case
+- Visible file selection, validation, size, and MIME feedback
+- PDF, DOC, DOCX, JPEG, PNG, TIFF, and WebP extraction support
+- Synthetic lost-passport case revealed only after explicit preview or completed package creation
 - Police, consulate, airline, and hotel recipient views
 - Different allowlisted and protected fields per role
 - Interactive revoke and 30-minute reissue controls
@@ -20,7 +23,9 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Server-only Nutrient DWS extraction boundary
 - Per-field confidence and deterministic review reasons
 - Editable human confirmation before disclosure
+- Irreversible role-specific PDF redaction through Nutrient DWS
 - Downloadable synthetic travel-evidence sample
+- Prepared Doctavian DOCX template and matching JSON data
 - No real identity data or committed credentials
 
 ## Run locally

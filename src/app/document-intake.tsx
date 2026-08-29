@@ -52,13 +52,49 @@ const ROLE_POLICIES: Record<RecipientRole, { label: string; protect: string[] }>
   },
 };
 
+const MAX_FILE_SIZE = 10 * 1024 * 1024;
+const SUPPORTED_DOCUMENT_TYPES = new Set([
+  "application/msword",
+  "application/pdf",
+  "application/vnd.openxmlformats-officedocument.wordprocessingml.document",
+  "image/jpeg",
+  "image/png",
+  "image/tiff",
+  "image/webp",
+]);
+
+type DocumentIntakeProps = {
+  onCaseCreated: () => void;
+};
+
 function normalizeFieldLabel(label: string) {
   return label.replace(/\s+/g, " ").trim().toUpperCase();
 }
 
-export function DocumentIntake() {
+function validateDocument(file: File) {
+  if (!SUPPORTED_DOCUMENT_TYPES.has(file.type)) {
+    return "Unsupported file. Choose PDF, DOC, DOCX, JPEG, PNG, TIFF, or WebP.";
+  }
+  if (file.size === 0) {
+    return "The selected document is empty.";
+  }
+  if (file.size > MAX_FILE_SIZE) {
+    return "The selected document is larger than 10 MB.";
+  }
+  return "";
+}
+
+function formatFileSize(bytes: number) {
+  if (bytes < 1024 * 1024) {
+    return `${Math.max(1, Math.round(bytes / 1024))} KB`;
+  }
+  return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
+}
+
+export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>("checking");
   const [file, setFile] = useState<File | null>(null);
+  const [fileError, setFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [response, setResponse] = useState<ExtractionResponse | null>(null);
   const [confirmedFieldIds, setConfirmedFieldIds] = useState<string[]>([]);
@@ -91,7 +127,7 @@ export function DocumentIntake() {
 
   async function handleSubmit(event: FormEvent<HTMLFormElement>) {
     event.preventDefault();
-    if (!file || providerStatus !== "ready") {
+    if (!file || fileError) {
       return;
     }
 
@@ -234,14 +270,16 @@ export function DocumentIntake() {
 
           <label className="mt-6 block cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 transition hover:border-teal-500 hover:bg-teal-50/40 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-teal-700">
             <span className="block text-sm font-semibold text-slate-900">Travel evidence document</span>
-            <span className="mt-1 block text-xs leading-5 text-slate-500">PDF, JPEG, PNG, or WebP · maximum 10 MB · synthetic data only</span>
+            <span className="mt-1 block text-xs leading-5 text-slate-500">PDF, DOC, DOCX, JPEG, PNG, TIFF, or WebP · maximum 10 MB · one document at a time</span>
             <input
               className="mt-4 block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
               type="file"
               name="document"
-              accept="application/pdf,image/jpeg,image/png,image/webp"
+              accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,application/msword,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/tiff,image/webp"
               onChange={(event) => {
-                setFile(event.target.files?.[0] ?? null);
+                const selectedFile = event.target.files?.[0] ?? null;
+                setFile(selectedFile);
+                setFileError(selectedFile ? validateDocument(selectedFile) : "");
                 setResponse(null);
                 setConfirmedFieldIds([]);
                 setPackageStatus("idle");
@@ -250,13 +288,29 @@ export function DocumentIntake() {
             />
           </label>
 
+          {file ? (
+            <div className={`mt-3 flex flex-col gap-2 rounded-xl border px-4 py-3 text-sm sm:flex-row sm:items-center sm:justify-between ${fileError ? "border-rose-200 bg-rose-50 text-rose-800" : "border-emerald-200 bg-emerald-50 text-emerald-900"}`} aria-live="polite">
+              <div className="min-w-0">
+                <span className="block truncate font-semibold">{file.name}</span>
+                <span className="mt-0.5 block text-xs opacity-75">{formatFileSize(file.size)} · {file.type || "Unknown browser MIME type"}</span>
+              </div>
+              <span className="shrink-0 text-xs font-bold">{fileError || "Ready for extraction"}</span>
+            </div>
+          ) : (
+            <p className="mt-3 text-xs text-slate-500">Nothing selected yet. HEIC files should be exported as JPEG before upload.</p>
+          )}
+
           <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
             <button
               type="submit"
-              disabled={!file || providerStatus !== "ready" || isSubmitting}
+              disabled={!file || Boolean(fileError) || isSubmitting}
               className="inline-flex min-h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
             >
-              {isSubmitting ? "Extracting with Nutrient…" : "Extract with Nutrient DWS"}
+              {isSubmitting
+                ? "Extracting with Nutrient…"
+                : file
+                  ? "Extract with Nutrient DWS"
+                  : "Choose a document first"}
             </button>
             <a className="text-center text-sm font-semibold text-teal-700 underline-offset-4 hover:underline" href="/samples/maya-travel-evidence.pdf" download>
               Download the synthetic PDF sample
@@ -369,6 +423,15 @@ export function DocumentIntake() {
                       ) : null}
                       {packageMessage ? (
                         <p className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${packageStatus === "error" ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-900"}`} aria-live="polite">{packageMessage}</p>
+                      ) : null}
+                      {packageStatus === "ready" ? (
+                        <button
+                          type="button"
+                          onClick={onCaseCreated}
+                          className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                        >
+                          Create temporary embassy
+                        </button>
                       ) : null}
                     </div>
                   ) : null}
