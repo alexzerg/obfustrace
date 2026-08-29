@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "Micro-Embassy | Emergency identity infrastructure",
+  title: "MinPayload | Empirical data minimization for AI agents",
   description:
-    "A temporary, role-based identity portal for travelers who lose their documents abroad.",
+    "Find the smallest personal-data payload that still completes an AI agent API action, then execute it with an auditable receipt.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

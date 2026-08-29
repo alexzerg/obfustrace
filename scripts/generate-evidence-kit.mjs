@@ -68,12 +68,12 @@ for (const document of documents) {
     .row strong { font-size:17px; }
     footer { margin-top:42px; color:#64748b; font-size:12px; line-height:1.6; }
   </style></head><body>
-    <header><b>MICRO-EMBASSY</b><span>TEST EVIDENCE</span></header>
+    <header><b>MINPAYLOAD</b><span>TEST EVIDENCE</span></header>
     <main>
       <div class="warning">INVALID SYNTHETIC DOCUMENT — HACKATHON DEMO ONLY</div>
       <h1>${document.title}</h1><p class="subtitle">${document.subtitle}</p>
       <section class="card">${rows}</section>
-      <footer>Source separation is intentional. Fields from this document must retain this filename as provenance when merged into an emergency case.</footer>
+      <footer>Source separation is intentional. MinPayload uses these fields only as candidate context before empirical API payload minimization.</footer>
     </main>
   </body></html>`);
   await page.pdf({ path: document.file, format: "A4", printBackground: true });

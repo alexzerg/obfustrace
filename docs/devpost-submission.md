@@ -1,16 +1,16 @@
-# Micro-Embassy — Devpost Submission Metadata
+# MinPayload — Devpost Submission Metadata
 
 ## Project name
 
-Micro-Embassy
+MinPayload
 
 ## Subtitle
 
-Ephemeral Trust Infrastructure for Travelers
+Empirical Data Minimization for AI Agents
 
-## Pitch (186/200 characters)
+## Pitch (185/200 characters)
 
-Micro-Embassy turns lost travel documents into an official recovery plan: verified authority, required steps, prepared contact message, reviewed evidence, and honest submission tracking.
+MinPayload experimentally removes personal fields from an AI agent's API call, finds the smallest payload that still succeeds, executes it with approval, and proves what stayed private.
 
 ## Built with
 
@@ -20,29 +20,22 @@ Micro-Embassy turns lost travel documents into an official recovery plan: verifi
 - Tailwind CSS
 - Node.js
 - Playwright
-- Tesseract.js
-- PDF.js
-- Nutrient DWS API
-- Document Intelligence
-- Browser OCR
-- OCR
+- REST API
+- AI Agents
+- API Security
+- Data Minimization
+- Human-in-the-Loop
 - GitHub
 - Vercel
-- HTML5
-- CSS3
 - Responsive Design
 - Accessibility
-- Role-Based Access Control
-- Privacy Engineering
-
-Private browser OCR is the default free path and keeps PDF/image processing on the user's device. Nutrient DWS remains an optional enhanced provider and was verified with real Processor API extraction and redaction calls before the trial credits expired. Only add further sponsor APIs after their integrations execute in the final demo.
 
 ## Try it out
 
-- Source code: https://github.com/alexzerg/micro-embassy
-- Live demo: https://micro-embassy.vercel.app
+- Source code: https://github.com/alexzerg/minpayload
+- Live demo: https://minpayload.vercel.app
 - Demo video: not recorded yet
 
 ## Product boundary
 
-Micro-Embassy activates after a traveler loses critical documents abroad. It matches a curated official recovery procedure, prepares the contact message and evidence package, and distinguishes prepared, opened, submitted, acknowledged, and accepted states. It never replaces an official authority or claims delivery without evidence. Purpose-bound disclosure remains a secondary privacy capability.
+The airline API, traveler context, and rebooking result are synthetic. The prototype demonstrates a real sequence of HTTP dry-run experiments, human approval, minimum-payload execution, and an auditable receipt. It does not claim that a real airline reservation was changed.

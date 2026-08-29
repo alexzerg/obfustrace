@@ -1,61 +1,43 @@
-# Micro-Embassy
+# MinPayload
 
-**Official recovery actions for travelers who lose their documents abroad.**
+**Empirical data minimization for AI-agent API actions.**
 
-Micro-Embassy turns a document-loss incident into a sourced action plan. It reviews available evidence, identifies the competent official authority from curated government sources, prepares the contact message and supporting package, and tracks prepared, opened, submitted, and acknowledged as different states. Purpose-bound disclosure remains a secondary privacy layer.
+MinPayload finds the smallest set of personal fields an AI agent needs to complete an action. It removes one field at a time, tests each candidate against the target API's dry-run contract, keeps only removals that still succeed, requests human approval, executes the minimum payload, and produces an audit receipt.
 
-**Live demo:** [micro-embassy.vercel.app](https://micro-embassy.vercel.app)
+## Why
 
-## Product boundaries
+Static allowlists guess what an API needs. MinPayload proves it experimentally.
 
-Micro-Embassy is not a travel planner, permanent digital wallet, government identity provider, or replacement for an official consular channel. It never labels an action sent, delivered, acknowledged, or accepted without corresponding evidence. Scans help prepare a recovery case but do not replace originals required by an authority.
-
-## Current vertical slice
-
-- Incident intake for nationality, current location, lost item, incident date, and planned departure
-- Curated France-in-Barcelona recovery procedure grounded in official sources
-- Competent authority details, emergency phone, address, hours, and official contact channel
-- Recovery Action Board with honest Prepared, Opened, User-confirmed, and Not Submitted states
-- Prepared consular contact message generated from reviewed case facts
-- User-provided official reference tracking without claiming independent verification
-- Empty-state guided workflow instead of a preloaded case
-- Visible file selection, validation, size, and MIME feedback
-- PDF, DOC, DOCX, JPEG, PNG, TIFF, and WebP extraction support
-- Synthetic lost-passport case revealed only after explicit preview or completed package creation
-- Police, consulate, airline, and hotel recipient views
-- Different allowlisted and protected fields per role
-- Interactive revoke and 30-minute reissue controls
-- Explicit case-destruction lifecycle
-- Free private browser OCR for image-only PDFs and photographs
-- Local PDF rendering through PDF.js and OCR through Tesseract.js
-- Optional server-only Nutrient DWS extraction boundary
-- Per-field confidence, source provenance, and deterministic review reasons
-- Editable human confirmation before disclosure
-- Multi-document evidence collection with per-source field provenance
-- Mandatory human-confirmed owner for every document
-- Hard blocking when documents belong to different people
-- Explicit recipient-agency selection; uploading never grants access
-- Dynamic case dashboard containing only selected recipient links
-- Dynamic recipient views built from reviewed evidence
-- Source filename displayed beside every disclosed fact
-- Irreversible role-specific PDF redaction through Nutrient DWS
-- Separate synthetic passport, flight, and hotel evidence PDFs
-- Prepared Doctavian DOCX template and matching JSON data
-- No real identity data or committed credentials
+For the included flight-rebooking scenario, an agent starts with eight fields from passport, flight, hotel, and user-request context. MinPayload executes eight dry-run requests and determines that passport number, date of birth, nationality, and hotel are unnecessary. The final execution sends only passenger name, booking reference, current flight, and requested date.
 
 ## Run locally
 
 ```bash
 npm install
-cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Private browser OCR requires no API key and never uploads the source document. Nutrient DWS is optional and requires `NUTRIENT_DWS_API_KEY` only when that provider is selected.
+Open [http://localhost:3000](http://localhost:3000).
 
-## Private browser OCR
+## Executable demo
 
-PDF.js renders up to three PDF pages locally and Tesseract.js reads those canvases in the browser. Images are passed directly to Tesseract. The normalized review fields preserve the source filename so identity facts cannot silently appear to come from an airline or hotel document. No request to Micro-Embassy or Nutrient is made during this path.
+1. Click **Run payload minimization**.
+2. Inspect each field-removal experiment and its actual API status.
+3. Review the minimum successful JSON payload.
+4. Click **Approve and execute minimal payload**.
+5. Inspect the rebooking confirmation and exact list of transmitted fields.
+
+The target is a synthetic airline API implemented at `POST /api/demo-airline/rebook`. `?dryRun=true` validates candidate payloads without executing the action. The final approved request performs one synthetic rebooking and returns a deterministic receipt.
+
+## Verified result
+
+- Starting context: 8 fields
+- Dry-run experiments: 8
+- Minimum payload: 4 fields
+- Data reduction: 50%
+- Blocked: passport number, date of birth, nationality, hotel
+- Executed action: rebook `AF1249` to `AF1449`
+- Confirmation: deterministic `REBOOK-*` receipt
 
 ## Quality gates
 
@@ -65,26 +47,8 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright covers official recovery sourcing, submission-truth states, provider readiness, upload error handling, identity conflicts, selected recipients, role switching, revocation, reissue, and desktop/mobile layouts.
+Playwright validates the minimization algorithm, insufficient and sufficient dry-run payloads, final API execution, audit receipt, responsive layout, and exact absence of sensitive fields from the execution request.
 
-## Nutrient DWS
+## Boundaries
 
-`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. It normalizes every detected field, preserves the provider confidence score, flags suspicious values using deterministic checks, and requires human confirmation before disclosure. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response. When Nutrient returns HTTP 402, the UI reports `NUTRIENT_CREDITS_EXHAUSTED`, links to the credits dashboard, and displays no fabricated extraction result.
-
-`POST /api/documents/redact` creates role-specific PDFs using multiple `createRedactions` actions followed by `applyRedactions`. A post-redaction extraction verifies that protected underlying text is absent rather than visually covered.
-
-See [`docs/integrations/nutrient-dws.md`](docs/integrations/nutrient-dws.md) for the contract and setup, and [`docs/screenshots/nutrient-human-review.png`](docs/screenshots/nutrient-human-review.png) for the verified review flow.
-
-## Doctavian Documents
-
-A reproducible emergency travel request template and matching JSON data are prepared in [`templates/doctavian`](templates/doctavian) and [`data/doctavian`](data/doctavian). The template contains 22 merge expressions and an `mdoc:table` evidence repeater. The registered trial currently returns `ApiKeyInvalid`; no Doctavian integration is claimed until the subscription is activated and a generated document is verified.
-
-See [`docs/integrations/doctavian.md`](docs/integrations/doctavian.md) for the authenticated generation sequence.
-
-## Planned integrations
-
-Doctavian generation, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
-
-## Safety
-
-All documents and identities in the demo are synthetic. Never commit `.env` files, API credentials, real passport scans, or live emergency-case data.
+The included airline API and traveler data are synthetic. MinPayload does not claim a real flight was changed. The prototype proves the minimization and execution-control mechanism that can sit in front of a real API gateway or agent tool call.
