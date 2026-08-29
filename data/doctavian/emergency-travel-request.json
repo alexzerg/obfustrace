@@ -1,0 +1,60 @@
+{
+  "Case": [
+    {
+      "CaseId": "ME-2048",
+      "GeneratedAt": "29 August 2026, 18:30 CEST",
+      "Traveler": {
+        "FullName": "Maya Laurent",
+        "Nationality": "French",
+        "DateOfBirth": "18 May 1994",
+        "DocumentNumber": "19DF000042"
+      },
+      "Incident": {
+        "Type": "Lost passport and wallet",
+        "Date": "29 August 2026",
+        "Location": "Barcelona Sants railway station, Barcelona, Spain",
+        "PoliceReportReference": "ME-BCN-2048",
+        "Statement": "The traveler reports that her passport and wallet were discovered missing after arriving at Barcelona Sants. She requests assistance obtaining an emergency travel document for her confirmed return journey."
+      },
+      "Travel": {
+        "BookingReference": "K8R4NQ",
+        "FlightNumber": "AF1249",
+        "Departure": "31 August 2026 at 17:45",
+        "Route": "Barcelona (BCN) to Paris (CDG)",
+        "Hotel": "Hotel Brummell",
+        "Reservation": "BRM-88215"
+      },
+      "Recipient": {
+        "Organization": "French Consulate General in Barcelona",
+        "Purpose": "Emergency travel document request"
+      },
+      "Evidence": [
+        {
+          "Type": "Synthetic passport copy",
+          "Reference": "maya-travel-evidence.pdf",
+          "Status": "Human reviewed"
+        },
+        {
+          "Type": "Return flight booking",
+          "Reference": "K8R4NQ / AF1249",
+          "Status": "Human reviewed"
+        },
+        {
+          "Type": "Hotel reservation",
+          "Reference": "BRM-88215",
+          "Status": "Human reviewed"
+        },
+        {
+          "Type": "Incident declaration",
+          "Reference": "ME-2048",
+          "Status": "Pending traveler signature"
+        }
+      ],
+      "Declaration": {
+        "Accuracy": "I confirm that the information in this emergency request is accurate to the best of my knowledge.",
+        "Consent": "I authorize the minimum necessary evidence to be shared with the named consular recipient for the stated purpose.",
+        "Retention": "This package belongs to a temporary Micro-Embassy case and should not be retained beyond the emergency process unless required by law."
+      }
+    }
+  ]
+}

@@ -47,11 +47,19 @@ Playwright covers provider readiness, upload error handling, role switching, rev
 
 `POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. It normalizes every detected field, preserves the provider confidence score, flags suspicious values using deterministic checks, and requires human confirmation before disclosure. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response.
 
+`POST /api/documents/redact` creates role-specific PDFs using multiple `createRedactions` actions followed by `applyRedactions`. A post-redaction extraction verifies that protected underlying text is absent rather than visually covered.
+
 See [`docs/integrations/nutrient-dws.md`](docs/integrations/nutrient-dws.md) for the contract and setup, and [`docs/screenshots/nutrient-human-review.png`](docs/screenshots/nutrient-human-review.png) for the verified review flow.
+
+## Doctavian Documents
+
+A reproducible emergency travel request template and matching JSON data are prepared in [`templates/doctavian`](templates/doctavian) and [`data/doctavian`](data/doctavian). The template contains 22 merge expressions and an `mdoc:table` evidence repeater. The registered trial currently returns `ApiKeyInvalid`; no Doctavian integration is claimed until the subscription is activated and a generated document is verified.
+
+See [`docs/integrations/doctavian.md`](docs/integrations/doctavian.md) for the authenticated generation sequence.
 
 ## Planned integrations
 
-Document redaction, PDF assembly, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
+Doctavian generation, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
 
 ## Safety
 
