@@ -3,8 +3,18 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { extractWithBrowserOcr } from "@/lib/browser-ocr";
-import { buildEmergencyCase } from "@/lib/case-model";
-import type { EmergencyCaseData, EvidenceDocument, EvidenceField } from "@/lib/case-model";
+import {
+  buildEmergencyCase,
+  getDistinctDocumentSubjects,
+  hasDocumentSubjectConflict,
+  normalizeSubjectName,
+} from "@/lib/case-model";
+import type {
+  EmergencyCaseData,
+  EvidenceDocument,
+  EvidenceField,
+  RecipientId,
+} from "@/lib/case-model";
 import { parseEvidenceText } from "@/lib/evidence-parser";
 import { useHydrated } from "@/lib/use-hydrated";
 
@@ -29,7 +39,7 @@ type ExtractionResponse = {
   retryable?: boolean;
 };
 
-type RecipientRole = "airline" | "consulate" | "hotel" | "police";
+type RecipientRole = RecipientId;
 type PackageStatus = "idle" | "generating" | "ready" | "error";
 
 type CollectedDocument = EvidenceDocument;
@@ -92,11 +102,21 @@ function formatFileSize(bytes: number) {
   return `${(bytes / (1024 * 1024)).toFixed(1)} MB`;
 }
 
+function inferDocumentSubject(fields: EvidenceField[]) {
+  return (
+    fields.find((field) =>
+      ["FULL NAME", "PASSENGER", "GUEST"].includes(normalizeFieldLabel(field.label)),
+    )?.value.trim() ?? ""
+  );
+}
+
 export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   const isHydrated = useHydrated();
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>("checking");
   const [collectedDocuments, setCollectedDocuments] = useState<CollectedDocument[]>([]);
+  const [selectedRecipientIds, setSelectedRecipientIds] = useState<RecipientId[]>([]);
+  const [documentSubject, setDocumentSubject] = useState("");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -154,6 +174,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
       });
       const body = (await result.json()) as ExtractionResponse;
       setResponse(body);
+      setDocumentSubject(inferDocumentSubject(body.fields ?? []));
       setConfirmedFieldIds([]);
     } catch {
       setResponse({
@@ -190,6 +211,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
         (field) => field.reviewReasons.length > 0,
       ).length;
 
+      setDocumentSubject(inferDocumentSubject(parsedFields));
       setResponse({
         provider: result.provider,
         filename: file.name,
@@ -234,6 +256,15 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
         ),
       };
     });
+    const subjectField = fields.find((field) => field.id === fieldId);
+    if (
+      subjectField &&
+      ["FULL NAME", "PASSENGER", "GUEST"].includes(
+        normalizeFieldLabel(subjectField.label),
+      )
+    ) {
+      setDocumentSubject(value);
+    }
     setConfirmedFieldIds((current) => current.filter((id) => id !== fieldId));
   }
 
@@ -246,7 +277,12 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   }
 
   function addReviewedDocument() {
-    if (!file || !allFieldsConfirmed || fields.length === 0) {
+    if (
+      !file ||
+      !allFieldsConfirmed ||
+      fields.length === 0 ||
+      !normalizeSubjectName(documentSubject)
+    ) {
       return;
     }
 
@@ -257,11 +293,13 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
         name: file.name,
         type: file.type,
         size: file.size,
+        subjectName: documentSubject.trim(),
         fields,
       },
     ]);
     setFile(null);
     setFileError("");
+    setDocumentSubject("");
     setResponse(null);
     setConfirmedFieldIds([]);
     setPackageStatus("idle");
@@ -282,16 +320,12 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
     (total, document) => total + document.fields.length,
     0,
   );
-  const identityNames = [
-    ...new Set(
-      collectedDocuments
-        .flatMap((document) => document.fields)
-        .filter((field) => normalizeFieldLabel(field.label) === "FULL NAME")
-        .map((field) => field.value.trim().toLocaleLowerCase()),
-    ),
-  ];
-  const identityConflict = identityNames.length > 1;
-  const canCreateCase = collectedDocuments.length >= 2 && !identityConflict;
+  const identityNames = getDistinctDocumentSubjects(collectedDocuments);
+  const identityConflict = hasDocumentSubjectConflict(collectedDocuments);
+  const canCreateCase =
+    collectedDocuments.length >= 2 &&
+    !identityConflict &&
+    selectedRecipientIds.length > 0;
   const redactionTerms = [
     ...new Set(
       fields
@@ -401,7 +435,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                   <div key={document.id} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
                     <div className="min-w-0">
                       <p className="truncate text-sm font-semibold text-slate-900">{document.name}</p>
-                      <p className="mt-0.5 text-xs text-slate-500">{document.fields.length} reviewed fields · {formatFileSize(document.size)}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">Subject: {document.subjectName} · {document.fields.length} reviewed fields · {formatFileSize(document.size)}</p>
                     </div>
                     <button
                       type="button"
@@ -415,8 +449,34 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
               </div>
             ) : null}
 
+            <fieldset className="mt-4">
+              <legend className="text-xs font-bold uppercase tracking-[0.12em] text-slate-600">Choose recipient agencies</legend>
+              <p className="mt-1 text-xs text-slate-500">Uploading a document never authorizes sharing. Select only organizations that should receive a temporary link.</p>
+              <div className="mt-3 grid grid-cols-2 gap-2 sm:grid-cols-4">
+                {(Object.entries(ROLE_POLICIES) as Array<[RecipientId, (typeof ROLE_POLICIES)[RecipientId]]>).map(([id, policy]) => {
+                  const selected = selectedRecipientIds.includes(id);
+                  return (
+                    <label key={id} className={`flex cursor-pointer items-center gap-2 rounded-xl border px-3 py-2 text-sm font-semibold ${selected ? "border-teal-400 bg-teal-50 text-teal-900" : "border-slate-200 bg-white text-slate-600"}`}>
+                      <input
+                        type="checkbox"
+                        checked={selected}
+                        onChange={() =>
+                          setSelectedRecipientIds((current) =>
+                            current.includes(id)
+                              ? current.filter((recipientId) => recipientId !== id)
+                              : [...current, id],
+                          )
+                        }
+                      />
+                      {policy.label}
+                    </label>
+                  );
+                })}
+              </div>
+            </fieldset>
+
             {identityConflict ? (
-              <p className="mt-4 rounded-xl bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-900">Identity conflict: reviewed documents contain different names. Resolve the mismatch before creating the case.</p>
+              <p className="mt-4 rounded-xl bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-900">Identity conflict: {identityNames.join(" ≠ ")}. Documents for different people cannot be merged into one case.</p>
             ) : null}
 
             {collectedDocuments.length > 0 && !identityConflict ? (
@@ -425,11 +485,21 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
 
             <button
               type="button"
-              onClick={() => onCaseCreated(buildEmergencyCase(collectedDocuments))}
+              onClick={() => onCaseCreated(
+                  buildEmergencyCase(collectedDocuments, {
+                    recipientIds: selectedRecipientIds,
+                  }),
+                )}
               disabled={!canCreateCase}
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
             >
-              {collectedDocuments.length < 2 ? "Add at least two reviewed documents" : identityConflict ? "Resolve identity conflict" : `Create temporary embassy from ${collectedDocuments.length} documents`}
+              {collectedDocuments.length < 2
+                ? "Add at least two reviewed documents"
+                : identityConflict
+                  ? "Resolve identity conflict"
+                  : selectedRecipientIds.length === 0
+                    ? "Choose at least one recipient agency"
+                    : `Create temporary embassy with ${selectedRecipientIds.length} recipient ${selectedRecipientIds.length === 1 ? "link" : "links"}`}
             </button>
           </div>
 
@@ -447,6 +517,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                 const selectedFile = event.target.files?.[0] ?? null;
                 setFile(selectedFile);
                 setFileError(selectedFile ? validateDocument(selectedFile) : "");
+                setDocumentSubject("");
                 setResponse(null);
                 setConfirmedFieldIds([]);
                 setPackageStatus("idle");
@@ -523,6 +594,19 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                     </span>
                   </div>
 
+                  <label className={`mt-4 block rounded-xl border p-3 ${normalizeSubjectName(documentSubject) ? "border-emerald-200 bg-emerald-50" : "border-rose-200 bg-rose-50"}`}>
+                    <span className="block text-xs font-bold uppercase tracking-[0.12em] text-slate-700">Document belongs to</span>
+                    <span className="mt-1 block text-xs text-slate-500">Required human-confirmed merge key. OCR suggestions are never sufficient on their own.</span>
+                    <input
+                      aria-label="Document belongs to"
+                      className="mt-2 min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm font-semibold text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                      value={documentSubject}
+                      onChange={(event) => setDocumentSubject(event.target.value)}
+                      placeholder="Enter the person's full name"
+                    />
+                    {!normalizeSubjectName(documentSubject) ? <span className="mt-2 block text-xs font-semibold text-rose-800">Enter and confirm the person named in this document before adding it to the case.</span> : null}
+                  </label>
+
                   <div className="mt-4 grid gap-3">
                     {fields.map((field) => {
                       const isConfirmed = confirmedFieldIds.includes(field.id);
@@ -578,9 +662,10 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                       <button
                         type="button"
                         onClick={addReviewedDocument}
-                        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800"
+                        disabled={!normalizeSubjectName(documentSubject)}
+                        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                       >
-                        Add reviewed document to case
+                        {normalizeSubjectName(documentSubject) ? "Add reviewed document to case" : "Confirm document owner first"}
                       </button>
                       <div className="mt-4 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end">
                         <label className="text-sm font-semibold text-slate-800">
@@ -630,7 +715,11 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                       {packageStatus === "ready" ? (
                         <button
                           type="button"
-                          onClick={() => onCaseCreated(buildEmergencyCase(collectedDocuments))}
+                          onClick={() => onCaseCreated(
+                  buildEmergencyCase(collectedDocuments, {
+                    recipientIds: selectedRecipientIds,
+                  }),
+                )}
                           disabled={!canCreateCase}
                           className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                         >

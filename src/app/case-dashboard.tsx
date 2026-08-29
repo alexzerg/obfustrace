@@ -1,10 +1,10 @@
 "use client";
 
 import { useMemo, useState } from "react";
-import type { CaseFact, EmergencyCaseData } from "@/lib/case-model";
+import type { CaseFact, EmergencyCaseData, RecipientId } from "@/lib/case-model";
 import { useHydrated } from "@/lib/use-hydrated";
 
-type RoleId = "police" | "consulate" | "airline" | "hotel";
+type RoleId = RecipientId;
 type AccessState = "active" | "revoked";
 
 type Recipient = {
@@ -133,7 +133,9 @@ function buildRecipients(caseData: EmergencyCaseData): Recipient[] {
     sourceName: "Micro-Embassy correlation",
   };
 
-  return recipientTemplates.map((template) => {
+  return recipientTemplates
+    .filter((template) => caseData.recipientIds.includes(template.id))
+    .map((template) => {
     if (template.id === "police") {
       return {
         ...template,
@@ -200,7 +202,7 @@ type CaseDashboardProps = {
 export function CaseDashboard({ caseData }: CaseDashboardProps) {
   const isHydrated = useHydrated();
   const recipients = useMemo(() => buildRecipients(caseData), [caseData]);
-  const [selectedId, setSelectedId] = useState<RoleId>("consulate");
+  const [selectedId, setSelectedId] = useState<RoleId>(recipients[0]?.id ?? "police");
   const [access, setAccess] = useState<Record<RoleId, AccessState>>({
     police: "active",
     consulate: "active",
@@ -216,7 +218,9 @@ export function CaseDashboard({ caseData }: CaseDashboardProps) {
     [recipients, selectedId],
   );
   const selectedStatus = access[selected.id];
-  const activeCount = Object.values(access).filter((status) => status === "active").length;
+  const activeCount = recipients.filter(
+    (recipient) => access[recipient.id] === "active",
+  ).length;
 
   function toggleAccess() {
     setAccess((current) => ({

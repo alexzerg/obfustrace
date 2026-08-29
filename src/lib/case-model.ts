@@ -1,3 +1,5 @@
+export type RecipientId = "police" | "consulate" | "airline" | "hotel";
+
 export type EvidenceField = {
   id: string;
   label: string;
@@ -14,6 +16,7 @@ export type EvidenceDocument = {
   name: string;
   type: string;
   size: number;
+  subjectName: string;
   fields: EvidenceField[];
 };
 
@@ -29,11 +32,36 @@ export type EmergencyCaseData = {
   destructionHours: number;
   documents: EvidenceDocument[];
   fieldCount: number;
+  recipientIds: RecipientId[];
   facts: Record<string, CaseFact>;
 };
 
 function normalizeLabel(label: string) {
   return label.replace(/\s+/g, " ").trim().toUpperCase();
+}
+
+export function normalizeSubjectName(name: string) {
+  return name
+    .normalize("NFKD")
+    .replace(/[\u0300-\u036f]/g, "")
+    .replace(/[^A-Za-z0-9]+/g, " ")
+    .trim()
+    .toLocaleLowerCase();
+}
+
+export function getDistinctDocumentSubjects(documents: EvidenceDocument[]) {
+  const subjects = new Map<string, string>();
+  for (const document of documents) {
+    const normalized = normalizeSubjectName(document.subjectName);
+    if (normalized && !subjects.has(normalized)) {
+      subjects.set(normalized, document.subjectName.trim());
+    }
+  }
+  return [...subjects.values()];
+}
+
+export function hasDocumentSubjectConflict(documents: EvidenceDocument[]) {
+  return getDistinctDocumentSubjects(documents).length > 1;
 }
 
 function stableCaseNumber(documents: EvidenceDocument[]) {
@@ -45,10 +73,31 @@ function stableCaseNumber(documents: EvidenceDocument[]) {
   return String(hash).padStart(4, "0");
 }
 
+const ALL_RECIPIENTS: RecipientId[] = ["police", "consulate", "airline", "hotel"];
+
 export function buildEmergencyCase(
   documents: EvidenceDocument[],
-  options: { caseId?: string; createdAt?: string } = {},
+  options: {
+    caseId?: string;
+    createdAt?: string;
+    recipientIds?: RecipientId[];
+  } = {},
 ): EmergencyCaseData {
+  if (documents.length === 0) {
+    throw new Error("At least one reviewed document is required.");
+  }
+  if (documents.some((document) => !normalizeSubjectName(document.subjectName))) {
+    throw new Error("Every document requires a confirmed subject name.");
+  }
+  if (hasDocumentSubjectConflict(documents)) {
+    throw new Error("Documents for different people cannot be merged into one case.");
+  }
+
+  const recipientIds = [...new Set(options.recipientIds ?? ALL_RECIPIENTS)];
+  if (recipientIds.length === 0) {
+    throw new Error("At least one recipient must be selected.");
+  }
+
   const facts: Record<string, CaseFact> = {};
 
   for (const document of documents) {
@@ -65,15 +114,12 @@ export function buildEmergencyCase(
 
   return {
     caseId: options.caseId ?? `ME-${stableCaseNumber(documents)}`,
-    travelerName:
-      facts["FULL NAME"]?.value ??
-      facts["PASSENGER"]?.value ??
-      facts["GUEST"]?.value ??
-      "Traveler",
+    travelerName: documents[0].subjectName.trim(),
     createdAt: options.createdAt ?? new Date().toISOString(),
     destructionHours: 48,
     documents,
     fieldCount: documents.reduce((total, document) => total + document.fields.length, 0),
+    recipientIds,
     facts,
   };
 }
@@ -97,6 +143,7 @@ const demoDocuments: EvidenceDocument[] = [
     name: "maya-passport.pdf",
     type: "application/pdf",
     size: 124535,
+    subjectName: "Maya Laurent",
     fields: [
       field("demo-name", "FULL NAME", "Maya Laurent", "maya-passport.pdf"),
       field("demo-nationality", "NATIONALITY", "French", "maya-passport.pdf"),
@@ -110,6 +157,7 @@ const demoDocuments: EvidenceDocument[] = [
     name: "maya-flight-itinerary.pdf",
     type: "application/pdf",
     size: 130080,
+    subjectName: "Maya Laurent",
     fields: [
       field("demo-passenger", "FULL NAME", "Maya Laurent", "maya-flight-itinerary.pdf"),
       field("demo-booking", "BOOKING REF.", "K8R4NQ", "maya-flight-itinerary.pdf"),
@@ -123,6 +171,7 @@ const demoDocuments: EvidenceDocument[] = [
     name: "maya-hotel-confirmation.pdf",
     type: "application/pdf",
     size: 128691,
+    subjectName: "Maya Laurent",
     fields: [
       field("demo-guest", "FULL NAME", "Maya Laurent", "maya-hotel-confirmation.pdf"),
       field("demo-hotel-name", "HOTEL", "Hotel Brummell", "maya-hotel-confirmation.pdf"),

@@ -26,8 +26,11 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Per-field confidence, source provenance, and deterministic review reasons
 - Editable human confirmation before disclosure
 - Multi-document evidence collection with per-source field provenance
-- Identity correlation and conflict blocking before case creation
-- Dynamic case dashboard and recipient views built from reviewed evidence
+- Mandatory human-confirmed owner for every document
+- Hard blocking when documents belong to different people
+- Explicit recipient-agency selection; uploading never grants access
+- Dynamic case dashboard containing only selected recipient links
+- Dynamic recipient views built from reviewed evidence
 - Source filename displayed beside every disclosed fact
 - Irreversible role-specific PDF redaction through Nutrient DWS
 - Separate synthetic passport, flight, and hotel evidence PDFs

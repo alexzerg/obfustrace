@@ -57,6 +57,7 @@ test("builds dashboard facts from reviewed source documents", () => {
       name: "passport.pdf",
       type: "application/pdf",
       size: 100,
+      subjectName: "Maya Laurent",
       fields: passportFields,
     },
     {
@@ -64,14 +65,19 @@ test("builds dashboard facts from reviewed source documents", () => {
       name: "flight.pdf",
       type: "application/pdf",
       size: 100,
+      subjectName: "Maya Laurent",
       fields: flightFields,
     },
-  ], { caseId: "ME-TEST" });
+  ], {
+    caseId: "ME-TEST",
+    recipientIds: ["police", "airline"],
+  });
 
   expect(caseData).toMatchObject({
     caseId: "ME-TEST",
     travelerName: "Maya Laurent",
     fieldCount: passportFields.length + flightFields.length,
+    recipientIds: ["police", "airline"],
   });
   expect(caseData.facts["DOCUMENT NO."]).toEqual({
     value: "19DF000042",
@@ -81,6 +87,32 @@ test("builds dashboard facts from reviewed source documents", () => {
     value: "AF1249",
     sourceName: "flight.pdf",
   });
+});
+
+test("rejects documents confirmed as belonging to different people", () => {
+  const mayaFields = parseEvidenceText("FULL NAME Maya Laurent", "maya.pdf", 95);
+  const mariaFields = parseEvidenceText("FULL NAME Maria Ivanova", "maria.pdf", 95);
+
+  expect(() =>
+    buildEmergencyCase([
+      {
+        id: "maya",
+        name: "maya.pdf",
+        type: "application/pdf",
+        size: 100,
+        subjectName: "Maya Laurent",
+        fields: mayaFields,
+      },
+      {
+        id: "maria",
+        name: "maria.pdf",
+        type: "application/pdf",
+        size: 100,
+        subjectName: "Maria Ivanova",
+        fields: mariaFields,
+      },
+    ], { recipientIds: ["police"] }),
+  ).toThrow("Documents for different people cannot be merged into one case.");
 });
 
 test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) => {
