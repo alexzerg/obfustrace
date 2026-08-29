@@ -84,14 +84,33 @@ test("exposes an honest Nutrient readiness and upload contract", async ({ page, 
 
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Recover evidence from what remains" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Download the synthetic PDF sample" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "1. Download passport" })).toBeVisible();
 });
 
 test("serves a prominently synthetic extraction sample", async ({ request }) => {
-  const response = await request.get("/samples/maya-travel-evidence.pdf");
+  const response = await request.get("/samples/maya-passport.pdf");
   expect(response.ok()).toBeTruthy();
   expect(response.headers()["content-type"]).toContain("application/pdf");
   expect((await response.body()).byteLength).toBeGreaterThan(10_000);
+});
+
+test("offers separate passport, flight, and hotel evidence sources", async ({ page, request }) => {
+  for (const path of [
+    "/samples/maya-passport.pdf",
+    "/samples/maya-flight-itinerary.pdf",
+    "/samples/maya-hotel-confirmation.pdf",
+  ]) {
+    const response = await request.get(path);
+    expect(response.ok()).toBeTruthy();
+    expect(response.headers()["content-type"]).toContain("application/pdf");
+    expect((await response.body()).byteLength).toBeGreaterThan(10_000);
+  }
+
+  await page.goto("/");
+  await expect(page.getByRole("link", { name: "1. Download passport" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "2. Download flight itinerary" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "3. Download hotel confirmation" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add at least two reviewed documents" })).toBeDisabled();
 });
 
 test("explains file selection and supports office documents", async ({ page }) => {

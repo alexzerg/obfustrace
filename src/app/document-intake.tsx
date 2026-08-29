@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { extractWithBrowserOcr } from "@/lib/browser-ocr";
 import { parseEvidenceText } from "@/lib/evidence-parser";
@@ -38,6 +38,14 @@ type ExtractionResponse = {
 
 type RecipientRole = "airline" | "consulate" | "hotel" | "police";
 type PackageStatus = "idle" | "generating" | "ready" | "error";
+
+type CollectedDocument = {
+  id: string;
+  name: string;
+  type: string;
+  size: number;
+  fields: ExtractedField[];
+};
 
 const ROLE_POLICIES: Record<RecipientRole, { label: string; protect: string[] }> = {
   airline: {
@@ -99,7 +107,9 @@ function formatFileSize(bytes: number) {
 
 export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   const isHydrated = useHydrated();
+  const fileInputRef = useRef<HTMLInputElement>(null);
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>("checking");
+  const [collectedDocuments, setCollectedDocuments] = useState<CollectedDocument[]>([]);
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -248,11 +258,53 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
     );
   }
 
+  function addReviewedDocument() {
+    if (!file || !allFieldsConfirmed || fields.length === 0) {
+      return;
+    }
+
+    setCollectedDocuments((current) => [
+      ...current.filter((document) => document.name !== file.name),
+      {
+        id: `${file.name}-${file.lastModified}-${file.size}`,
+        name: file.name,
+        type: file.type,
+        size: file.size,
+        fields,
+      },
+    ]);
+    setFile(null);
+    setFileError("");
+    setResponse(null);
+    setConfirmedFieldIds([]);
+    setPackageStatus("idle");
+    setPackageMessage("");
+    setPackageActionUrl("");
+    setOcrProgress({ status: "", progress: 0 });
+    if (fileInputRef.current) {
+      fileInputRef.current.value = "";
+    }
+  }
+
   const fields = response?.fields ?? [];
   const browserOcrSupported = Boolean(
     file && (file.type === "application/pdf" || file.type.startsWith("image/")),
   );
   const allFieldsConfirmed = fields.length > 0 && confirmedFieldIds.length === fields.length;
+  const collectedFieldCount = collectedDocuments.reduce(
+    (total, document) => total + document.fields.length,
+    0,
+  );
+  const identityNames = [
+    ...new Set(
+      collectedDocuments
+        .flatMap((document) => document.fields)
+        .filter((field) => normalizeFieldLabel(field.label) === "FULL NAME")
+        .map((field) => field.value.trim().toLocaleLowerCase()),
+    ),
+  ];
+  const identityConflict = identityNames.length > 1;
+  const canCreateCase = collectedDocuments.length >= 2 && !identityConflict;
   const redactionTerms = [
     ...new Set(
       fields
@@ -341,11 +393,65 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
             </span>
           </div>
 
+          <div className="mt-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 sm:p-5">
+            <div className="flex flex-col gap-3 sm:flex-row sm:items-start sm:justify-between">
+              <div>
+                <h3 className="text-sm font-bold uppercase tracking-[0.14em] text-slate-700">Case evidence collection</h3>
+                <p className="mt-1 text-xs leading-5 text-slate-500">Add independently reviewed documents. Every extracted field retains its source filename.</p>
+              </div>
+              <span className="shrink-0 rounded-full bg-white px-3 py-1.5 text-xs font-bold text-slate-700 ring-1 ring-slate-200">{collectedDocuments.length} documents · {collectedFieldCount} fields</span>
+            </div>
+
+            <div className="mt-4 grid gap-2 sm:grid-cols-3">
+              <a className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-teal-800 ring-1 ring-slate-200 hover:ring-teal-400" href="/samples/maya-passport.pdf" download>1. Download passport</a>
+              <a className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-blue-800 ring-1 ring-slate-200 hover:ring-blue-400" href="/samples/maya-flight-itinerary.pdf" download>2. Download flight itinerary</a>
+              <a className="rounded-xl bg-white px-3 py-2 text-xs font-semibold text-violet-800 ring-1 ring-slate-200 hover:ring-violet-400" href="/samples/maya-hotel-confirmation.pdf" download>3. Download hotel confirmation</a>
+            </div>
+
+            {collectedDocuments.length > 0 ? (
+              <div className="mt-4 grid gap-2">
+                {collectedDocuments.map((document) => (
+                  <div key={document.id} className="flex flex-col gap-2 rounded-xl border border-slate-200 bg-white px-3 py-3 sm:flex-row sm:items-center sm:justify-between">
+                    <div className="min-w-0">
+                      <p className="truncate text-sm font-semibold text-slate-900">{document.name}</p>
+                      <p className="mt-0.5 text-xs text-slate-500">{document.fields.length} reviewed fields · {formatFileSize(document.size)}</p>
+                    </div>
+                    <button
+                      type="button"
+                      onClick={() => setCollectedDocuments((current) => current.filter((item) => item.id !== document.id))}
+                      className="text-left text-xs font-bold text-rose-700 hover:underline sm:text-right"
+                    >
+                      Remove
+                    </button>
+                  </div>
+                ))}
+              </div>
+            ) : null}
+
+            {identityConflict ? (
+              <p className="mt-4 rounded-xl bg-rose-100 px-3 py-2 text-sm font-semibold text-rose-900">Identity conflict: reviewed documents contain different names. Resolve the mismatch before creating the case.</p>
+            ) : null}
+
+            {collectedDocuments.length > 0 && !identityConflict ? (
+              <p className="mt-4 text-xs font-semibold text-emerald-800">Identity correlation: {identityNames[0] ?? "no full name extracted yet"} · sources remain separate.</p>
+            ) : null}
+
+            <button
+              type="button"
+              onClick={onCaseCreated}
+              disabled={!canCreateCase}
+              className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+            >
+              {collectedDocuments.length < 2 ? "Add at least two reviewed documents" : identityConflict ? "Resolve identity conflict" : `Create temporary embassy from ${collectedDocuments.length} documents`}
+            </button>
+          </div>
+
           <label className="mt-6 block cursor-pointer rounded-2xl border border-dashed border-slate-300 bg-slate-50 p-5 transition hover:border-teal-500 hover:bg-teal-50/40 focus-within:outline-2 focus-within:outline-offset-2 focus-within:outline-teal-700">
             <span className="block text-sm font-semibold text-slate-900">Travel evidence document</span>
             <span className="mt-1 block text-xs leading-5 text-slate-500">PDF, DOC, DOCX, JPEG, PNG, TIFF, or WebP · maximum 10 MB · one document at a time</span>
             <input
               className="mt-4 block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
+              ref={fileInputRef}
               type="file"
               name="document"
               disabled={!isHydrated}
@@ -397,9 +503,6 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
             >
               {isSubmitting ? "Extracting with Nutrient…" : "Try Nutrient DWS"}
             </button>
-            <a className="text-center text-sm font-semibold text-teal-700 underline-offset-4 hover:underline" href="/samples/maya-travel-evidence.pdf" download>
-              Download the synthetic PDF sample
-            </a>
           </div>
 
           {providerStatus === "blocked" ? (
@@ -484,7 +587,14 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
 
                   {allFieldsConfirmed ? (
                     <div className="mt-4 rounded-2xl border border-teal-200 bg-teal-50 p-4 sm:p-5">
-                      <p className="text-sm font-semibold text-teal-950">Human review complete. Generate a purpose-bound PDF from the corrected values.</p>
+                      <p className="text-sm font-semibold text-teal-950">Human review complete. Add this source to the case, or generate a purpose-bound PDF from a reviewed PDF.</p>
+                      <button
+                        type="button"
+                        onClick={addReviewedDocument}
+                        className="mt-4 inline-flex min-h-11 items-center justify-center rounded-full bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800"
+                      >
+                        Add reviewed document to case
+                      </button>
                       <div className="mt-4 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end">
                         <label className="text-sm font-semibold text-slate-800">
                           Recipient

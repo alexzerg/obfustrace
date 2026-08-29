@@ -25,8 +25,10 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Optional server-only Nutrient DWS extraction boundary
 - Per-field confidence, source provenance, and deterministic review reasons
 - Editable human confirmation before disclosure
+- Multi-document evidence collection with per-source field provenance
+- Identity correlation and conflict blocking before case creation
 - Irreversible role-specific PDF redaction through Nutrient DWS
-- Downloadable synthetic travel-evidence sample
+- Separate synthetic passport, flight, and hotel evidence PDFs
 - Prepared Doctavian DOCX template and matching JSON data
 - No real identity data or committed credentials
 
