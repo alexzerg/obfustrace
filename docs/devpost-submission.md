@@ -20,8 +20,11 @@ Micro-Embassy creates a temporary, secure identity portal for travelers who lose
 - Tailwind CSS
 - Node.js
 - Playwright
+- Tesseract.js
+- PDF.js
 - Nutrient DWS API
 - Document Intelligence
+- Browser OCR
 - OCR
 - GitHub
 - Vercel
@@ -32,7 +35,7 @@ Micro-Embassy creates a temporary, secure identity portal for travelers who lose
 - Role-Based Access Control
 - Privacy Engineering
 
-Nutrient DWS is verified with a real Processor API call against the synthetic sample. Only add further sponsor APIs after their integrations execute in the final demo.
+Private browser OCR is the default free path and keeps PDF/image processing on the user's device. Nutrient DWS remains an optional enhanced provider and was verified with real Processor API extraction and redaction calls before the trial credits expired. Only add further sponsor APIs after their integrations execute in the final demo.
 
 ## Try it out
 

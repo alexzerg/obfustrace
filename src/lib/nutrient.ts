@@ -26,6 +26,7 @@ export type ExtractedField = {
   dataType: string;
   page: number;
   reviewReasons: string[];
+  sourceName?: string;
 };
 
 export class NutrientError extends Error {
@@ -161,7 +162,10 @@ export async function extractDocumentWithNutrient(file: File) {
     throw new NutrientError("Nutrient DWS returned a non-JSON extraction response.", 502);
   }
 
-  const fields = normalizeNutrientResult(result);
+  const fields = normalizeNutrientResult(result).map((field) => ({
+    ...field,
+    sourceName: file.name,
+  }));
   const reviewRequiredCount = fields.filter((field) => field.reviewReasons.length > 0).length;
 
   return {

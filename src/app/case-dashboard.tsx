@@ -1,6 +1,7 @@
 "use client";
 
-import { useMemo, useState, useSyncExternalStore } from "react";
+import { useMemo, useState } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type RoleId = "police" | "consulate" | "airline" | "hotel";
 type AccessState = "active" | "revoked";
@@ -81,14 +82,6 @@ const recipients: Recipient[] = [
     protected: ["Passport scan", "Passport number", "Flight details", "Police report"],
   },
 ];
-
-function subscribeToHydration() {
-  return () => {};
-}
-
-function useHydrated() {
-  return useSyncExternalStore(subscribeToHydration, () => true, () => false);
-}
 
 export function CaseDashboard() {
   const isHydrated = useHydrated();

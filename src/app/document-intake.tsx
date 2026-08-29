@@ -2,6 +2,9 @@
 
 import { useEffect, useState } from "react";
 import type { FormEvent } from "react";
+import { extractWithBrowserOcr } from "@/lib/browser-ocr";
+import { parseEvidenceText } from "@/lib/evidence-parser";
+import { useHydrated } from "@/lib/use-hydrated";
 
 type ProviderStatus = "checking" | "ready" | "blocked" | "unavailable";
 
@@ -13,6 +16,7 @@ type ExtractedField = {
   dataType: string;
   page: number;
   reviewReasons: string[];
+  sourceName?: string;
 };
 
 type ExtractionResponse = {
@@ -94,10 +98,13 @@ function formatFileSize(bytes: number) {
 }
 
 export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
+  const isHydrated = useHydrated();
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>("checking");
   const [file, setFile] = useState<File | null>(null);
   const [fileError, setFileError] = useState("");
   const [isSubmitting, setIsSubmitting] = useState(false);
+  const [isBrowserExtracting, setIsBrowserExtracting] = useState(false);
+  const [ocrProgress, setOcrProgress] = useState({ status: "", progress: 0 });
   const [response, setResponse] = useState<ExtractionResponse | null>(null);
   const [confirmedFieldIds, setConfirmedFieldIds] = useState<string[]>([]);
   const [recipientRole, setRecipientRole] = useState<RecipientRole>("airline");
@@ -162,6 +169,61 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
     }
   }
 
+  async function handleBrowserOcr() {
+    if (!file || fileError) {
+      return;
+    }
+
+    setIsBrowserExtracting(true);
+    setOcrProgress({ status: "Starting private browser OCR", progress: 0 });
+    setResponse(null);
+    setConfirmedFieldIds([]);
+    setPackageStatus("idle");
+    setPackageMessage("");
+    setPackageActionUrl("");
+
+    try {
+      const result = await extractWithBrowserOcr(file, setOcrProgress);
+      const parsedFields = parseEvidenceText(
+        result.text,
+        file.name,
+        result.confidence,
+      );
+      const reviewRequiredCount = parsedFields.filter(
+        (field) => field.reviewReasons.length > 0,
+      ).length;
+
+      setResponse({
+        provider: result.provider,
+        filename: file.name,
+        receivedAt: new Date().toISOString(),
+        summary: {
+          fieldCount: parsedFields.length,
+          reviewRequiredCount,
+          readyCount: parsedFields.length - reviewRequiredCount,
+        },
+        fields: parsedFields,
+        result: {
+          text: result.text,
+          confidence: result.confidence,
+          pageCount: result.pageCount,
+          privacy: "Processed locally in this browser; no document upload occurred.",
+        },
+      });
+    } catch (error) {
+      setResponse({
+        error: "BROWSER_OCR_FAILED",
+        message:
+          error instanceof Error
+            ? error.message
+            : "Private browser OCR could not read this document.",
+        retryable: true,
+      });
+    } finally {
+      setIsBrowserExtracting(false);
+    }
+  }
+
   function updateField(fieldId: string, value: string) {
     setResponse((current) => {
       if (!current?.fields) {
@@ -187,6 +249,9 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   }
 
   const fields = response?.fields ?? [];
+  const browserOcrSupported = Boolean(
+    file && (file.type === "application/pdf" || file.type.startsWith("image/")),
+  );
   const allFieldsConfirmed = fields.length > 0 && confirmedFieldIds.length === fields.length;
   const redactionTerms = [
     ...new Set(
@@ -269,7 +334,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
             <div>
               <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Document intake · Step 1</p>
               <h2 id="intake-title" className="mt-2 text-2xl font-semibold tracking-tight text-slate-950 sm:text-3xl">Recover evidence from what remains</h2>
-              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Upload one synthetic PDF or image. When configured, the file is sent server-to-server to Nutrient DWS for structured extraction and is not retained by this app.</p>
+              <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">Upload one document. Private browser OCR is free and keeps PDF/image processing on this device; Nutrient DWS remains an optional enhanced provider for structured extraction.</p>
             </div>
             <span className={`shrink-0 rounded-full px-3 py-1.5 text-xs font-bold ${statusCopy.className}`} aria-live="polite">
               {statusCopy.label}
@@ -283,6 +348,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
               className="mt-4 block w-full text-sm text-slate-600 file:mr-4 file:rounded-full file:border-0 file:bg-slate-950 file:px-4 file:py-2 file:text-sm file:font-semibold file:text-white"
               type="file"
               name="document"
+              disabled={!isHydrated}
               accept=".pdf,.doc,.docx,.jpg,.jpeg,.png,.tif,.tiff,.webp,application/msword,application/pdf,application/vnd.openxmlformats-officedocument.wordprocessingml.document,image/jpeg,image/png,image/tiff,image/webp"
               onChange={(event) => {
                 const selectedFile = event.target.files?.[0] ?? null;
@@ -309,17 +375,27 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
             <p className="mt-3 text-xs text-slate-500">Nothing selected yet. HEIC files should be exported as JPEG before upload.</p>
           )}
 
-          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:items-center">
+          <div className="mt-5 flex flex-col gap-3 sm:flex-row sm:flex-wrap sm:items-center">
+            <button
+              type="button"
+              onClick={handleBrowserOcr}
+              disabled={!isHydrated || !file || Boolean(fileError) || !browserOcrSupported || isBrowserExtracting || isSubmitting}
+              className="inline-flex min-h-11 items-center justify-center rounded-full bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+            >
+              {isBrowserExtracting
+                ? `${ocrProgress.status} ${Math.round(ocrProgress.progress * 100)}%`
+                : !file
+                  ? "Choose a document first"
+                  : browserOcrSupported
+                    ? "Extract privately in browser"
+                    : "Private OCR needs PDF or image"}
+            </button>
             <button
               type="submit"
-              disabled={!file || Boolean(fileError) || isSubmitting}
-              className="inline-flex min-h-11 items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+              disabled={!isHydrated || !file || Boolean(fileError) || isSubmitting || isBrowserExtracting}
+              className="inline-flex min-h-11 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-slate-500 hover:bg-slate-50 disabled:cursor-not-allowed disabled:border-slate-200 disabled:bg-slate-100 disabled:text-slate-400"
             >
-              {isSubmitting
-                ? "Extracting with Nutrient…"
-                : file
-                  ? "Extract with Nutrient DWS"
-                  : "Choose a document first"}
+              {isSubmitting ? "Extracting with Nutrient…" : "Try Nutrient DWS"}
             </button>
             <a className="text-center text-sm font-semibold text-teal-700 underline-offset-4 hover:underline" href="/samples/maya-travel-evidence.pdf" download>
               Download the synthetic PDF sample
@@ -334,7 +410,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
 
           {response ? (
             <div className={`mt-5 rounded-2xl border p-4 sm:p-5 ${response.error ? "border-rose-200 bg-rose-50" : "border-emerald-200 bg-emerald-50"}`} aria-live="polite">
-              <p className="font-semibold text-slate-950">{response.error ? response.message : `Nutrient extracted ${response.summary?.fieldCount ?? fields.length} fields from ${response.filename ?? "the document"}`}</p>
+              <p className="font-semibold text-slate-950">{response.error ? response.message : response.provider === "private-browser-ocr" ? `Private browser OCR found ${response.summary?.fieldCount ?? fields.length} review items in ${response.filename ?? "the document"}` : `Nutrient extracted ${response.summary?.fieldCount ?? fields.length} fields from ${response.filename ?? "the document"}`}</p>
               {response.error && response.actionUrl ? (
                 <a
                   className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
@@ -372,7 +448,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                           <div className="flex flex-wrap items-start justify-between gap-3">
                             <div>
                               <p className="text-xs font-bold uppercase tracking-[0.12em] text-slate-500">{field.label} · Page {field.page}</p>
-                              <p className="mt-1 text-xs text-slate-400">Detected as {field.dataType}</p>
+                              <p className="mt-1 text-xs text-slate-400">Source: {field.sourceName ?? response.filename ?? "uploaded document"} · Detected as {field.dataType}</p>
                             </div>
                             <div className="flex items-center gap-2">
                               {needsReview ? <span className="rounded-full bg-amber-100 px-2.5 py-1 text-[11px] font-bold text-amber-800">Needs review</span> : null}
@@ -467,7 +543,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                   ) : null}
 
                   <details className="mt-4">
-                    <summary className="cursor-pointer text-sm font-semibold text-teal-800">Inspect raw Nutrient JSON output</summary>
+                    <summary className="cursor-pointer text-sm font-semibold text-teal-800">{response.provider === "private-browser-ocr" ? "Inspect raw browser OCR text" : "Inspect raw Nutrient JSON output"}</summary>
                     <pre className="mt-3 max-h-72 overflow-auto rounded-xl bg-slate-950 p-4 text-xs leading-5 text-slate-100">{JSON.stringify(response.result, null, 2)}</pre>
                   </details>
                 </div>

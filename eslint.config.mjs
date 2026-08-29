@@ -12,6 +12,8 @@ const eslintConfig = defineConfig([
     "out/**",
     "build/**",
     "next-env.d.ts",
+    // Unmodified vendored PDF.js worker loaded by the browser OCR provider.
+    "public/pdf.worker.min.mjs",
   ]),
 ]);
 

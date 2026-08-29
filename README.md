@@ -20,8 +20,10 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Different allowlisted and protected fields per role
 - Interactive revoke and 30-minute reissue controls
 - Explicit case-destruction lifecycle
-- Server-only Nutrient DWS extraction boundary
-- Per-field confidence and deterministic review reasons
+- Free private browser OCR for image-only PDFs and photographs
+- Local PDF rendering through PDF.js and OCR through Tesseract.js
+- Optional server-only Nutrient DWS extraction boundary
+- Per-field confidence, source provenance, and deterministic review reasons
 - Editable human confirmation before disclosure
 - Irreversible role-specific PDF redaction through Nutrient DWS
 - Downloadable synthetic travel-evidence sample
@@ -36,7 +38,11 @@ cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000). Real extraction requires a private `NUTRIENT_DWS_API_KEY`; without it, the UI remains honest and reports that the provider is not configured.
+Open [http://localhost:3000](http://localhost:3000). Private browser OCR requires no API key and never uploads the source document. Nutrient DWS is optional and requires `NUTRIENT_DWS_API_KEY` only when that provider is selected.
+
+## Private browser OCR
+
+PDF.js renders up to three PDF pages locally and Tesseract.js reads those canvases in the browser. Images are passed directly to Tesseract. The normalized review fields preserve the source filename so identity facts cannot silently appear to come from an airline or hotel document. No request to Micro-Embassy or Nutrient is made during this path.
 
 ## Quality gates
 

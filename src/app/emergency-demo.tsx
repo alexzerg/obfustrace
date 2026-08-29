@@ -1,12 +1,14 @@
 "use client";
 
 import { useState } from "react";
+import { useHydrated } from "@/lib/use-hydrated";
 import { CaseDashboard } from "./case-dashboard";
 import { DocumentIntake } from "./document-intake";
 
 const steps = ["Upload evidence", "Review extraction", "Create packages", "Manage access"];
 
 export function EmergencyDemo() {
+  const isHydrated = useHydrated();
   const [caseActive, setCaseActive] = useState(false);
 
   return (
@@ -27,7 +29,8 @@ export function EmergencyDemo() {
           <button
             type="button"
             onClick={() => setCaseActive((current) => !current)}
-            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-teal-600 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700"
+            disabled={!isHydrated}
+            className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-teal-600 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-wait disabled:opacity-70"
           >
             {caseActive ? "Reset demo" : "Preview completed synthetic case"}
           </button>

@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { parseEvidenceText } from "../src/lib/evidence-parser";
 import { mapNutrientFailure } from "../src/lib/nutrient-errors";
 
 test("maps exhausted Nutrient credits to an actionable domain error", () => {
@@ -12,6 +13,30 @@ test("maps exhausted Nutrient credits to an actionable domain error", () => {
       retryable: true,
     },
   });
+});
+
+test("keeps passport and flight facts tied to their source documents", () => {
+  const passport = parseEvidenceText(
+    "FULL NAME Maya Laurent\nNATIONALITY French\nDATE OF BIRTH 18 May 1994\nDOCUMENT NUMBER 19DF000042",
+    "passport.pdf",
+    92,
+  );
+  const flight = parseEvidenceText(
+    "PASSENGER NAME Maya Laurent\nBOOKING REFERENCE K8R4NQ\nFLIGHT NUMBER AF1249",
+    "flight-itinerary.pdf",
+    94,
+  );
+
+  expect(passport.find((field) => field.label === "DOCUMENT NO.")).toMatchObject({
+    value: "19DF000042",
+    sourceName: "passport.pdf",
+  });
+  expect(passport.some((field) => field.label === "FLIGHT NUMBER")).toBeFalsy();
+  expect(flight.find((field) => field.label === "FLIGHT NUMBER")).toMatchObject({
+    value: "AF1249",
+    sourceName: "flight-itinerary.pdf",
+  });
+  expect(flight.some((field) => field.label === "DOCUMENT NO.")).toBeFalsy();
 });
 
 test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) => {
@@ -78,7 +103,8 @@ test("explains file selection and supports office documents", async ({ page }) =
   await input.setInputFiles("templates/doctavian/emergency-travel-request.docx");
   await expect(page.getByText("emergency-travel-request.docx")).toBeVisible();
   await expect(page.getByText("Ready for extraction")).toBeVisible();
-  await expect(page.getByRole("button", { name: "Extract with Nutrient DWS" })).toBeEnabled();
+  await expect(page.getByRole("button", { name: "Private OCR needs PDF or image" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Try Nutrient DWS" })).toBeEnabled();
 
   await input.setInputFiles({
     name: "unsupported.txt",
@@ -86,7 +112,7 @@ test("explains file selection and supports office documents", async ({ page }) =
     buffer: Buffer.from("not a supported identity document"),
   });
   await expect(page.getByText(/Unsupported file/)).toBeVisible();
-  await expect(page.getByRole("button", { name: "Extract with Nutrient DWS" })).toBeDisabled();
+  await expect(page.getByRole("button", { name: "Try Nutrient DWS" })).toBeDisabled();
 });
 
 test("switches to a purpose-bound airline view", async ({ page }) => {
