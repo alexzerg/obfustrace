@@ -21,6 +21,7 @@ Micro-Embassy creates a temporary, secure identity portal for travelers who lose
 - Node.js
 - Playwright
 - GitHub
+- Vercel
 - HTML5
 - CSS3
 - Responsive Design
@@ -33,7 +34,7 @@ Only add sponsor APIs after their integrations execute in the final demo.
 ## Try it out
 
 - Source code: https://github.com/alexzerg/micro-embassy
-- Live demo: not deployed yet
+- Live demo: https://micro-embassy.vercel.app
 - Demo video: not recorded yet
 
 ## Product boundary
