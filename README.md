@@ -27,6 +27,8 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Editable human confirmation before disclosure
 - Multi-document evidence collection with per-source field provenance
 - Identity correlation and conflict blocking before case creation
+- Dynamic case dashboard and recipient views built from reviewed evidence
+- Source filename displayed beside every disclosed fact
 - Irreversible role-specific PDF redaction through Nutrient DWS
 - Separate synthetic passport, flight, and hotel evidence PDFs
 - Prepared Doctavian DOCX template and matching JSON data

@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { DEMO_CASE_DATA } from "@/lib/case-model";
+import type { EmergencyCaseData } from "@/lib/case-model";
 import { useHydrated } from "@/lib/use-hydrated";
 import { CaseDashboard } from "./case-dashboard";
 import { DocumentIntake } from "./document-intake";
@@ -9,7 +11,8 @@ const steps = ["Upload evidence", "Review extraction", "Create packages", "Manag
 
 export function EmergencyDemo() {
   const isHydrated = useHydrated();
-  const [caseActive, setCaseActive] = useState(false);
+  const [caseData, setCaseData] = useState<EmergencyCaseData | null>(null);
+  const caseActive = Boolean(caseData);
 
   return (
     <section id="start" aria-label="Micro-Embassy guided demo">
@@ -28,7 +31,7 @@ export function EmergencyDemo() {
           </div>
           <button
             type="button"
-            onClick={() => setCaseActive((current) => !current)}
+            onClick={() => setCaseData((current) => (current ? null : DEMO_CASE_DATA))}
             disabled={!isHydrated}
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-teal-600 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-wait disabled:opacity-70"
           >
@@ -48,8 +51,8 @@ export function EmergencyDemo() {
         </ol>
       </div>
 
-      {!caseActive ? <DocumentIntake onCaseCreated={() => setCaseActive(true)} /> : null}
-      {caseActive ? <CaseDashboard /> : null}
+      {!caseActive ? <DocumentIntake onCaseCreated={setCaseData} /> : null}
+      {caseData ? <CaseDashboard caseData={caseData} /> : null}
     </section>
   );
 }

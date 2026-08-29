@@ -3,21 +3,14 @@
 import { useEffect, useRef, useState } from "react";
 import type { FormEvent } from "react";
 import { extractWithBrowserOcr } from "@/lib/browser-ocr";
+import { buildEmergencyCase } from "@/lib/case-model";
+import type { EmergencyCaseData, EvidenceDocument, EvidenceField } from "@/lib/case-model";
 import { parseEvidenceText } from "@/lib/evidence-parser";
 import { useHydrated } from "@/lib/use-hydrated";
 
 type ProviderStatus = "checking" | "ready" | "blocked" | "unavailable";
 
-type ExtractedField = {
-  id: string;
-  label: string;
-  value: string;
-  confidence: number;
-  dataType: string;
-  page: number;
-  reviewReasons: string[];
-  sourceName?: string;
-};
+type ExtractedField = EvidenceField;
 
 type ExtractionResponse = {
   provider?: string;
@@ -39,13 +32,7 @@ type ExtractionResponse = {
 type RecipientRole = "airline" | "consulate" | "hotel" | "police";
 type PackageStatus = "idle" | "generating" | "ready" | "error";
 
-type CollectedDocument = {
-  id: string;
-  name: string;
-  type: string;
-  size: number;
-  fields: ExtractedField[];
-};
+type CollectedDocument = EvidenceDocument;
 
 const ROLE_POLICIES: Record<RecipientRole, { label: string; protect: string[] }> = {
   airline: {
@@ -78,7 +65,7 @@ const SUPPORTED_DOCUMENT_TYPES = new Set([
 ]);
 
 type DocumentIntakeProps = {
-  onCaseCreated: () => void;
+  onCaseCreated: (caseData: EmergencyCaseData) => void;
 };
 
 function normalizeFieldLabel(label: string) {
@@ -438,7 +425,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
 
             <button
               type="button"
-              onClick={onCaseCreated}
+              onClick={() => onCaseCreated(buildEmergencyCase(collectedDocuments))}
               disabled={!canCreateCase}
               className="mt-4 inline-flex min-h-11 w-full items-center justify-center rounded-full bg-slate-950 px-5 text-sm font-bold text-white transition hover:bg-slate-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
             >
@@ -643,10 +630,11 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                       {packageStatus === "ready" ? (
                         <button
                           type="button"
-                          onClick={onCaseCreated}
-                          className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                          onClick={() => onCaseCreated(buildEmergencyCase(collectedDocuments))}
+                          disabled={!canCreateCase}
+                          className="mt-4 inline-flex min-h-12 w-full items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
                         >
-                          Create temporary embassy
+                          Open collected emergency case
                         </button>
                       ) : null}
                     </div>

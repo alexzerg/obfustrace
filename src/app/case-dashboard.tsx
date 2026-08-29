@@ -1,6 +1,7 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import type { CaseFact, EmergencyCaseData } from "@/lib/case-model";
 import { useHydrated } from "@/lib/use-hydrated";
 
 type RoleId = "police" | "consulate" | "airline" | "hotel";
@@ -13,11 +14,11 @@ type Recipient = {
   purpose: string;
   expiresIn: number;
   accent: string;
-  shared: Array<{ label: string; value: string }>;
+  shared: Array<{ label: string; value: string; sourceName?: string }>;
   protected: string[];
 };
 
-const recipients: Recipient[] = [
+const recipientTemplates: Recipient[] = [
   {
     id: "police",
     label: "Police",
@@ -83,8 +84,122 @@ const recipients: Recipient[] = [
   },
 ];
 
-export function CaseDashboard() {
+function findFact(caseData: EmergencyCaseData, ...labels: string[]) {
+  for (const label of labels) {
+    const fact = caseData.facts[label];
+    if (fact) {
+      return fact;
+    }
+  }
+  return undefined;
+}
+
+function sharedField(label: string, fact: CaseFact | undefined, fallback?: CaseFact) {
+  const selected = fact ?? fallback;
+  return selected
+    ? { label, value: selected.value, sourceName: selected.sourceName }
+    : null;
+}
+
+function compactFields(fields: Array<ReturnType<typeof sharedField>>) {
+  return fields.filter((field): field is NonNullable<typeof field> => Boolean(field));
+}
+
+function maskDocumentNumber(value: string) {
+  const compact = value.replace(/\s+/g, "");
+  if (compact.length <= 6) {
+    return "Protected";
+  }
+  return `${compact.slice(0, 4)}••••${compact.slice(-2)}`;
+}
+
+function buildRecipients(caseData: EmergencyCaseData): Recipient[] {
+  const name = findFact(caseData, "FULL NAME", "PASSENGER", "GUEST");
+  const nationality = findFact(caseData, "NATIONALITY");
+  const dateOfBirth = findFact(caseData, "DATE OF BIRTH");
+  const documentNumber = findFact(caseData, "DOCUMENT NO.");
+  const booking = findFact(caseData, "BOOKING REF.");
+  const flight = findFact(caseData, "FLIGHT NUMBER");
+  const route = findFact(caseData, "ROUTE");
+  const departure = findFact(caseData, "DEPARTURE");
+  const hotel = findFact(caseData, "HOTEL");
+  const reservation = findFact(caseData, "RESERVATION");
+  const caseDeclaration: CaseFact = {
+    value: "Critical travel documents reported lost",
+    sourceName: "Case declaration",
+  };
+  const identityAssertion: CaseFact = {
+    value: `${caseData.documents.length} reviewed source documents`,
+    sourceName: "Micro-Embassy correlation",
+  };
+
+  return recipientTemplates.map((template) => {
+    if (template.id === "police") {
+      return {
+        ...template,
+        organization: "Local police",
+        shared: compactFields([
+          sharedField("Legal name", name),
+          sharedField("Nationality", nationality),
+          sharedField("Date of birth", dateOfBirth),
+          sharedField("Incident", caseDeclaration),
+        ]),
+      };
+    }
+    if (template.id === "consulate") {
+      return {
+        ...template,
+        organization: nationality
+          ? `${nationality.value} consular assistance`
+          : "Consular assistance",
+        shared: compactFields([
+          sharedField("Legal name", name),
+          documentNumber
+            ? {
+                label: "Passport number",
+                value: maskDocumentNumber(documentNumber.value),
+                sourceName: documentNumber.sourceName,
+              }
+            : null,
+          sharedField("Nationality", nationality),
+          sharedField("Return flight", flight),
+          sharedField("Departure", departure),
+          sharedField("Identity evidence", identityAssertion),
+        ]),
+      };
+    }
+    if (template.id === "airline") {
+      return {
+        ...template,
+        shared: compactFields([
+          sharedField("Passenger", name),
+          sharedField("Booking reference", booking),
+          sharedField("Flight", flight),
+          sharedField("Route", route),
+          sharedField("Identity assertion", identityAssertion),
+        ]),
+      };
+    }
+    return {
+      ...template,
+      organization: hotel?.value ?? "Hotel assistance",
+      shared: compactFields([
+        sharedField("Guest", name),
+        sharedField("Reservation", reservation),
+        sharedField("Property", hotel),
+        sharedField("Identity status", caseDeclaration),
+      ]),
+    };
+  });
+}
+
+type CaseDashboardProps = {
+  caseData: EmergencyCaseData;
+};
+
+export function CaseDashboard({ caseData }: CaseDashboardProps) {
   const isHydrated = useHydrated();
+  const recipients = useMemo(() => buildRecipients(caseData), [caseData]);
   const [selectedId, setSelectedId] = useState<RoleId>("consulate");
   const [access, setAccess] = useState<Record<RoleId, AccessState>>({
     police: "active",
@@ -98,7 +213,7 @@ export function CaseDashboard() {
 
   const selected = useMemo(
     () => recipients.find((recipient) => recipient.id === selectedId) ?? recipients[0],
-    [selectedId],
+    [recipients, selectedId],
   );
   const selectedStatus = access[selected.id];
   const activeCount = Object.values(access).filter((status) => status === "active").length;
@@ -122,15 +237,15 @@ export function CaseDashboard() {
               <div className="mt-1 grid h-11 w-11 shrink-0 place-items-center rounded-2xl bg-teal-400 font-bold text-slate-950">ME</div>
               <div>
                 <div className="mb-2 flex flex-wrap items-center gap-2 text-xs font-semibold uppercase tracking-[0.18em] text-slate-400">
-                  <span>Emergency case ME-2048</span>
+                  <span>Emergency case {caseData.caseId}</span>
                   <span className="rounded-full bg-emerald-400/15 px-2.5 py-1 text-emerald-300">Protected</span>
                 </div>
-                <h2 id="case-title" className="text-xl font-semibold tracking-tight sm:text-2xl">Maya lost her passport in Barcelona</h2>
-                <p className="mt-1 text-sm text-slate-400">Opened 14 minutes ago · scheduled destruction in 47 hours</p>
+                <h2 id="case-title" className="text-xl font-semibold tracking-tight sm:text-2xl">{caseData.travelerName}&apos;s temporary embassy</h2>
+                <p className="mt-1 text-sm text-slate-400">Created from {caseData.documents.length} reviewed sources · scheduled destruction in {caseData.destructionHours} hours</p>
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
-              <Metric value="8" label="Evidence items" />
+              <Metric value={String(caseData.fieldCount)} label="Evidence items" />
               <Metric value={String(activeCount)} label="Active links" />
               <Metric value="0" label="Public files" />
             </div>
@@ -228,7 +343,10 @@ export function CaseDashboard() {
                     {selected.shared.map((field, index) => (
                       <div key={field.label} className={`grid gap-1 px-4 py-3 sm:grid-cols-[180px_1fr] sm:gap-5 ${index > 0 ? "border-t border-slate-100" : ""}`}>
                         <dt className="text-xs font-semibold uppercase tracking-wide text-slate-500">{field.label}</dt>
-                        <dd className="text-sm font-medium text-slate-900">{field.value}</dd>
+                        <dd className="text-sm font-medium text-slate-900">
+                          <span className="block">{field.value}</span>
+                          {field.sourceName ? <span className="mt-0.5 block text-[11px] font-normal text-slate-400">Source: {field.sourceName}</span> : null}
+                        </dd>
                       </div>
                     ))}
                   </dl>

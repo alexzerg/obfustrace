@@ -1,4 +1,5 @@
 import { expect, test } from "@playwright/test";
+import { buildEmergencyCase } from "../src/lib/case-model";
 import { parseEvidenceText } from "../src/lib/evidence-parser";
 import { mapNutrientFailure } from "../src/lib/nutrient-errors";
 
@@ -39,6 +40,49 @@ test("keeps passport and flight facts tied to their source documents", () => {
   expect(flight.some((field) => field.label === "DOCUMENT NO.")).toBeFalsy();
 });
 
+test("builds dashboard facts from reviewed source documents", () => {
+  const passportFields = parseEvidenceText(
+    "FULL NAME Maya Laurent\nNATIONALITY French\nDOCUMENT NUMBER 19DF000042",
+    "passport.pdf",
+    96,
+  );
+  const flightFields = parseEvidenceText(
+    "PASSENGER NAME Maya Laurent\nBOOKING REFERENCE K8R4NQ\nFLIGHT NUMBER AF1249",
+    "flight.pdf",
+    96,
+  );
+  const caseData = buildEmergencyCase([
+    {
+      id: "passport",
+      name: "passport.pdf",
+      type: "application/pdf",
+      size: 100,
+      fields: passportFields,
+    },
+    {
+      id: "flight",
+      name: "flight.pdf",
+      type: "application/pdf",
+      size: 100,
+      fields: flightFields,
+    },
+  ], { caseId: "ME-TEST" });
+
+  expect(caseData).toMatchObject({
+    caseId: "ME-TEST",
+    travelerName: "Maya Laurent",
+    fieldCount: passportFields.length + flightFields.length,
+  });
+  expect(caseData.facts["DOCUMENT NO."]).toEqual({
+    value: "19DF000042",
+    sourceName: "passport.pdf",
+  });
+  expect(caseData.facts["FLIGHT NUMBER"]).toEqual({
+    value: "AF1249",
+    sourceName: "flight.pdf",
+  });
+});
+
 test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) => {
   await page.goto("/");
 
@@ -46,7 +90,7 @@ test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) 
   await expect(page.getByText("Post-incident identity recovery")).toBeVisible();
   await expect(page.getByText("Not a travel planner.", { exact: false })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Start with an empty emergency case" })).toBeVisible();
-  await expect(page.getByRole("heading", { name: "Maya lost her passport in Barcelona" })).toHaveCount(0);
+  await expect(page.getByRole("heading", { name: "Maya Laurent's temporary embassy" })).toHaveCount(0);
 });
 
 test("exposes an honest Nutrient readiness and upload contract", async ({ page, request }) => {
