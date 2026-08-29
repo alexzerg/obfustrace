@@ -245,9 +245,9 @@ export function CaseDashboard({ caseData }: CaseDashboardProps) {
               </div>
             </div>
             <div className="grid grid-cols-3 gap-2 text-center sm:gap-3">
-              <Metric value={String(caseData.fieldCount)} label="Evidence items" />
-              <Metric value={String(activeCount)} label="Active links" />
-              <Metric value="0" label="Public files" />
+              <Metric value={String(caseData.documents.length)} label="Source docs" />
+              <Metric value={String(caseData.fieldCount)} label="Reviewed fields" />
+              <Metric value={String(activeCount)} label="Recipient links" />
             </div>
           </div>
         </header>
@@ -402,7 +402,7 @@ export function CaseDashboard({ caseData }: CaseDashboardProps) {
 
 function Metric({ value, label }: { value: string; label: string }) {
   return (
-    <div className="min-w-20 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
+    <div aria-label={`${label}: ${value}`} className="min-w-20 rounded-2xl border border-white/10 bg-white/5 px-3 py-2.5">
       <span className="block text-lg font-semibold text-white">{value}</span>
       <span className="block text-[10px] uppercase tracking-wide text-slate-400">{label}</span>
     </div>

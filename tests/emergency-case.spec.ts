@@ -182,6 +182,9 @@ test("switches to a purpose-bound airline view", async ({ page }) => {
   await page.goto("/");
 
   await page.getByRole("button", { name: "Preview completed synthetic case" }).click();
+  await expect(page.getByLabel("Source docs: 3")).toBeVisible();
+  await expect(page.getByLabel("Reviewed fields: 13")).toBeVisible();
+  await expect(page.getByLabel("Recipient links: 4")).toBeVisible();
   await page.getByRole("button", { name: /Airline/ }).click();
 
   await expect(page.getByRole("heading", { name: "Air France Assistance" })).toBeVisible();
