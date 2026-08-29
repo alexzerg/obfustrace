@@ -1,4 +1,18 @@
 import { expect, test } from "@playwright/test";
+import { mapNutrientFailure } from "../src/lib/nutrient-errors";
+
+test("maps exhausted Nutrient credits to an actionable domain error", () => {
+  expect(mapNutrientFailure(402, "extraction", "upstream failure")).toEqual({
+    status: 402,
+    body: {
+      error: "NUTRIENT_CREDITS_EXHAUSTED",
+      message:
+        "Nutrient DWS is connected, but this account has no credits available. Add hackathon credits in the Nutrient dashboard and retry. The document was not retained.",
+      actionUrl: "https://dashboard.nutrient.io/processor-api/",
+      retryable: true,
+    },
+  });
+});
 
 test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) => {
   await page.goto("/");

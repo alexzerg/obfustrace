@@ -28,6 +28,8 @@ type ExtractionResponse = {
   result?: unknown;
   error?: string;
   message?: string;
+  actionUrl?: string;
+  retryable?: boolean;
 };
 
 type RecipientRole = "airline" | "consulate" | "hotel" | "police";
@@ -101,6 +103,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
   const [recipientRole, setRecipientRole] = useState<RecipientRole>("airline");
   const [packageStatus, setPackageStatus] = useState<PackageStatus>("idle");
   const [packageMessage, setPackageMessage] = useState("");
+  const [packageActionUrl, setPackageActionUrl] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -135,6 +138,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
     setResponse(null);
     setPackageStatus("idle");
     setPackageMessage("");
+    setPackageActionUrl("");
 
     const formData = new FormData();
     formData.append("document", file);
@@ -207,6 +211,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
 
     setPackageStatus("generating");
     setPackageMessage("");
+    setPackageActionUrl("");
 
     const formData = new FormData();
     formData.append("document", file);
@@ -220,9 +225,10 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
       });
 
       if (!result.ok) {
-        const body = (await result.json()) as { message?: string };
+        const body = (await result.json()) as { message?: string; actionUrl?: string };
         setPackageStatus("error");
         setPackageMessage(body.message ?? "The redacted package could not be generated.");
+        setPackageActionUrl(body.actionUrl ?? "");
         return;
       }
 
@@ -237,18 +243,20 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
       const redactionCount =
         result.headers.get("x-redaction-count") ?? String(redactionTerms.length);
       setPackageStatus("ready");
+      setPackageActionUrl("");
       setPackageMessage(
         `${redactionCount} reviewed values were irreversibly removed for the ${ROLE_POLICIES[recipientRole].label.toLowerCase()} view.`,
       );
     } catch {
       setPackageStatus("error");
+      setPackageActionUrl("");
       setPackageMessage("The redaction request could not reach the server.");
     }
   }
 
   const statusCopy = {
     checking: { label: "Checking provider", className: "bg-slate-100 text-slate-600" },
-    ready: { label: "Nutrient DWS ready", className: "bg-emerald-100 text-emerald-700" },
+    ready: { label: "Nutrient connected", className: "bg-emerald-100 text-emerald-700" },
     blocked: { label: "API key required", className: "bg-amber-100 text-amber-800" },
     unavailable: { label: "Status unavailable", className: "bg-rose-100 text-rose-700" },
   }[providerStatus];
@@ -284,6 +292,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                 setConfirmedFieldIds([]);
                 setPackageStatus("idle");
                 setPackageMessage("");
+                setPackageActionUrl("");
               }}
             />
           </label>
@@ -326,6 +335,16 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
           {response ? (
             <div className={`mt-5 rounded-2xl border p-4 sm:p-5 ${response.error ? "border-rose-200 bg-rose-50" : "border-emerald-200 bg-emerald-50"}`} aria-live="polite">
               <p className="font-semibold text-slate-950">{response.error ? response.message : `Nutrient extracted ${response.summary?.fieldCount ?? fields.length} fields from ${response.filename ?? "the document"}`}</p>
+              {response.error && response.actionUrl ? (
+                <a
+                  className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950"
+                  href={response.actionUrl}
+                  target="_blank"
+                  rel="noreferrer"
+                >
+                  Open Nutrient credits dashboard
+                </a>
+              ) : null}
               {!response.error && fields.length > 0 ? (
                 <div className="mt-4">
                   <div className="flex flex-wrap items-center justify-between gap-3">
@@ -399,6 +418,7 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                               setRecipientRole(event.target.value as RecipientRole);
                               setPackageStatus("idle");
                               setPackageMessage("");
+                              setPackageActionUrl("");
                             }}
                             className="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
                           >
@@ -423,6 +443,16 @@ export function DocumentIntake({ onCaseCreated }: DocumentIntakeProps) {
                       ) : null}
                       {packageMessage ? (
                         <p className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${packageStatus === "error" ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-900"}`} aria-live="polite">{packageMessage}</p>
+                      ) : null}
+                      {packageStatus === "error" && packageActionUrl ? (
+                        <a
+                          className="mt-3 inline-flex min-h-10 items-center justify-center rounded-full bg-slate-950 px-4 text-sm font-bold text-white"
+                          href={packageActionUrl}
+                          target="_blank"
+                          rel="noreferrer"
+                        >
+                          Open Nutrient credits dashboard
+                        </a>
                       ) : null}
                       {packageStatus === "ready" ? (
                         <button

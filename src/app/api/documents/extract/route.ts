@@ -1,3 +1,4 @@
+import { mapNutrientFailure } from "@/lib/nutrient-errors";
 import {
   extractDocumentWithNutrient,
   isNutrientConfigured,
@@ -89,10 +90,8 @@ export async function POST(request: Request) {
     });
   } catch (error) {
     if (error instanceof NutrientError) {
-      return Response.json(
-        { error: "NUTRIENT_REQUEST_FAILED", message: error.message },
-        { status: error.status >= 400 && error.status < 600 ? error.status : 502 },
-      );
+      const failure = mapNutrientFailure(error.status, "extraction", error.message);
+      return Response.json(failure.body, { status: failure.status });
     }
 
     return Response.json(

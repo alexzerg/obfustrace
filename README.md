@@ -50,7 +50,7 @@ Playwright covers provider readiness, upload error handling, role switching, rev
 
 ## Nutrient DWS
 
-`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. It normalizes every detected field, preserves the provider confidence score, flags suspicious values using deterministic checks, and requires human confirmation before disclosure. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response.
+`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. It normalizes every detected field, preserves the provider confidence score, flags suspicious values using deterministic checks, and requires human confirmation before disclosure. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response. When Nutrient returns HTTP 402, the UI reports `NUTRIENT_CREDITS_EXHAUSTED`, links to the credits dashboard, and displays no fabricated extraction result.
 
 `POST /api/documents/redact` creates role-specific PDFs using multiple `createRedactions` actions followed by `applyRedactions`. A post-redaction extraction verifies that protected underlying text is absent rather than visually covered.
 
