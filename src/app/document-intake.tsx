@@ -30,12 +30,41 @@ type ExtractionResponse = {
   message?: string;
 };
 
+type RecipientRole = "airline" | "consulate" | "hotel" | "police";
+type PackageStatus = "idle" | "generating" | "ready" | "error";
+
+const ROLE_POLICIES: Record<RecipientRole, { label: string; protect: string[] }> = {
+  airline: {
+    label: "Airline",
+    protect: ["DATE OF BIRTH", "DOCUMENT NO.", "HOTEL", "RESERVATION"],
+  },
+  consulate: {
+    label: "Consulate",
+    protect: ["HOTEL", "RESERVATION"],
+  },
+  hotel: {
+    label: "Hotel",
+    protect: ["DATE OF BIRTH", "DOCUMENT NO.", "NATIONALITY", "BOOKING REF.", "DEPARTURE"],
+  },
+  police: {
+    label: "Police",
+    protect: ["BOOKING REF.", "DEPARTURE", "HOTEL", "RESERVATION"],
+  },
+};
+
+function normalizeFieldLabel(label: string) {
+  return label.replace(/\s+/g, " ").trim().toUpperCase();
+}
+
 export function DocumentIntake() {
   const [providerStatus, setProviderStatus] = useState<ProviderStatus>("checking");
   const [file, setFile] = useState<File | null>(null);
   const [isSubmitting, setIsSubmitting] = useState(false);
   const [response, setResponse] = useState<ExtractionResponse | null>(null);
   const [confirmedFieldIds, setConfirmedFieldIds] = useState<string[]>([]);
+  const [recipientRole, setRecipientRole] = useState<RecipientRole>("airline");
+  const [packageStatus, setPackageStatus] = useState<PackageStatus>("idle");
+  const [packageMessage, setPackageMessage] = useState("");
 
   useEffect(() => {
     const controller = new AbortController();
@@ -68,6 +97,8 @@ export function DocumentIntake() {
 
     setIsSubmitting(true);
     setResponse(null);
+    setPackageStatus("idle");
+    setPackageMessage("");
 
     const formData = new FormData();
     formData.append("document", file);
@@ -117,6 +148,67 @@ export function DocumentIntake() {
 
   const fields = response?.fields ?? [];
   const allFieldsConfirmed = fields.length > 0 && confirmedFieldIds.length === fields.length;
+  const redactionTerms = [
+    ...new Set(
+      fields
+        .filter((field) =>
+          ROLE_POLICIES[recipientRole].protect.includes(normalizeFieldLabel(field.label)),
+        )
+        .map((field) => field.value.trim())
+        .filter((value) => value.length >= 2),
+    ),
+  ];
+
+  async function generateRecipientPackage() {
+    if (
+      !file ||
+      file.type !== "application/pdf" ||
+      !allFieldsConfirmed ||
+      redactionTerms.length === 0
+    ) {
+      return;
+    }
+
+    setPackageStatus("generating");
+    setPackageMessage("");
+
+    const formData = new FormData();
+    formData.append("document", file);
+    formData.append("role", recipientRole);
+    formData.append("terms", JSON.stringify(redactionTerms));
+
+    try {
+      const result = await fetch("/api/documents/redact", {
+        method: "POST",
+        body: formData,
+      });
+
+      if (!result.ok) {
+        const body = (await result.json()) as { message?: string };
+        setPackageStatus("error");
+        setPackageMessage(body.message ?? "The redacted package could not be generated.");
+        return;
+      }
+
+      const blob = await result.blob();
+      const downloadUrl = URL.createObjectURL(blob);
+      const download = document.createElement("a");
+      download.href = downloadUrl;
+      download.download = `micro-embassy-${recipientRole}.pdf`;
+      download.click();
+      window.setTimeout(() => URL.revokeObjectURL(downloadUrl), 0);
+
+      const redactionCount =
+        result.headers.get("x-redaction-count") ?? String(redactionTerms.length);
+      setPackageStatus("ready");
+      setPackageMessage(
+        `${redactionCount} reviewed values were irreversibly removed for the ${ROLE_POLICIES[recipientRole].label.toLowerCase()} view.`,
+      );
+    } catch {
+      setPackageStatus("error");
+      setPackageMessage("The redaction request could not reach the server.");
+    }
+  }
 
   const statusCopy = {
     checking: { label: "Checking provider", className: "bg-slate-100 text-slate-600" },
@@ -152,6 +244,8 @@ export function DocumentIntake() {
                 setFile(event.target.files?.[0] ?? null);
                 setResponse(null);
                 setConfirmedFieldIds([]);
+                setPackageStatus("idle");
+                setPackageMessage("");
               }}
             />
           </label>
@@ -164,8 +258,8 @@ export function DocumentIntake() {
             >
               {isSubmitting ? "Extracting with Nutrient…" : "Extract with Nutrient DWS"}
             </button>
-            <a className="text-center text-sm font-semibold text-teal-700 underline-offset-4 hover:underline" href="/samples/maya-travel-evidence.png" download>
-              Download the synthetic sample
+            <a className="text-center text-sm font-semibold text-teal-700 underline-offset-4 hover:underline" href="/samples/maya-travel-evidence.pdf" download>
+              Download the synthetic PDF sample
             </a>
           </div>
 
@@ -240,7 +334,43 @@ export function DocumentIntake() {
                   </div>
 
                   {allFieldsConfirmed ? (
-                    <p className="mt-4 rounded-xl bg-emerald-100 px-4 py-3 text-sm font-semibold text-emerald-900">Human review complete. These corrected values are ready for recipient-specific disclosure.</p>
+                    <div className="mt-4 rounded-2xl border border-teal-200 bg-teal-50 p-4 sm:p-5">
+                      <p className="text-sm font-semibold text-teal-950">Human review complete. Generate a purpose-bound PDF from the corrected values.</p>
+                      <div className="mt-4 grid gap-3 sm:grid-cols-[180px_minmax(0,1fr)_auto] sm:items-end">
+                        <label className="text-sm font-semibold text-slate-800">
+                          Recipient
+                          <select
+                            value={recipientRole}
+                            onChange={(event) => {
+                              setRecipientRole(event.target.value as RecipientRole);
+                              setPackageStatus("idle");
+                              setPackageMessage("");
+                            }}
+                            className="mt-1 block min-h-11 w-full rounded-xl border border-slate-300 bg-white px-3 text-sm text-slate-900 outline-none focus:border-teal-600 focus:ring-2 focus:ring-teal-100"
+                          >
+                            {Object.entries(ROLE_POLICIES).map(([id, policy]) => <option key={id} value={id}>{policy.label}</option>)}
+                          </select>
+                        </label>
+                        <div className="rounded-xl bg-white px-3 py-2.5 text-xs leading-5 text-slate-600 ring-1 ring-slate-200">
+                          <strong className="text-slate-900">{redactionTerms.length} values protected:</strong>{" "}
+                          {redactionTerms.length > 0 ? redactionTerms.join(", ") : "No matching reviewed fields."}
+                        </div>
+                        <button
+                          type="button"
+                          onClick={generateRecipientPackage}
+                          disabled={file?.type !== "application/pdf" || redactionTerms.length === 0 || packageStatus === "generating"}
+                          className="min-h-11 rounded-full bg-teal-700 px-5 text-sm font-bold text-white transition hover:bg-teal-800 disabled:cursor-not-allowed disabled:bg-slate-300 disabled:text-slate-600"
+                        >
+                          {packageStatus === "generating" ? "Applying redactions…" : "Download protected PDF"}
+                        </button>
+                      </div>
+                      {file?.type !== "application/pdf" ? (
+                        <p className="mt-3 text-xs text-amber-900">Upload the synthetic PDF rather than an image to enable irreversible redaction.</p>
+                      ) : null}
+                      {packageMessage ? (
+                        <p className={`mt-3 rounded-xl px-3 py-2 text-sm font-semibold ${packageStatus === "error" ? "bg-rose-100 text-rose-800" : "bg-emerald-100 text-emerald-900"}`} aria-live="polite">{packageMessage}</p>
+                      ) : null}
+                    </div>
                   ) : null}
 
                   <details className="mt-4">

@@ -178,3 +178,59 @@ export async function extractDocumentWithNutrient(file: File) {
     result,
   };
 }
+
+export async function redactDocumentWithNutrient(file: File, terms: string[]) {
+  const apiKey = process.env.NUTRIENT_DWS_API_KEY?.trim();
+
+  if (!apiKey) {
+    throw new NutrientError("Nutrient DWS is not configured.", 503);
+  }
+
+  const actions: JsonRecord[] = terms.map((term) => ({
+    type: "createRedactions",
+    strategy: "text",
+    strategyOptions: {
+      text: term,
+      caseSensitive: false,
+      includeAnnotations: true,
+    },
+  }));
+  actions.push({ type: "applyRedactions" });
+
+  const formData = new FormData();
+  formData.append(
+    "instructions",
+    JSON.stringify({
+      parts: [{ file: "document" }],
+      actions,
+    }),
+  );
+  formData.append("document", file, file.name);
+
+  const response = await fetch(NUTRIENT_BUILD_URL, {
+    method: "POST",
+    headers: {
+      Authorization: `Bearer ${apiKey}`,
+    },
+    body: formData,
+    cache: "no-store",
+  });
+
+  if (!response.ok) {
+    throw new NutrientError(
+      `Nutrient DWS rejected the redaction workflow with HTTP ${response.status}.`,
+      response.status,
+    );
+  }
+
+  const contentType = response.headers.get("content-type") ?? "application/pdf";
+  if (!contentType.includes("application/pdf")) {
+    throw new NutrientError("Nutrient DWS returned a non-PDF redaction response.", 502);
+  }
+
+  return {
+    pdf: await response.arrayBuffer(),
+    contentType,
+    redactionCount: terms.length,
+  };
+}

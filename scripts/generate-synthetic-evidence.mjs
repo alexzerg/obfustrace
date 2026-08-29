@@ -64,5 +64,14 @@ await page.setContent(`
 `);
 
 await page.screenshot({ path: "public/samples/maya-travel-evidence.png", fullPage: true });
+await page.emulateMedia({ media: "screen" });
+await page.pdf({
+  path: "public/samples/maya-travel-evidence.pdf",
+  width: "1400px",
+  height: "900px",
+  printBackground: true,
+  pageRanges: "1",
+});
 await browser.close();
 console.log("public/samples/maya-travel-evidence.png");
+console.log("public/samples/maya-travel-evidence.pdf");

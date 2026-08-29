@@ -25,15 +25,31 @@ test("exposes an honest Nutrient readiness and upload contract", async ({ page, 
     error: "DOCUMENT_REQUIRED",
   });
 
+  const redactionStatusResponse = await request.get("/api/documents/redact");
+  expect(redactionStatusResponse.ok()).toBeTruthy();
+  await expect(redactionStatusResponse.json()).resolves.toMatchObject({
+    provider: "nutrient-dws",
+    operation: "irreversible-text-redaction",
+    acceptedType: "application/pdf",
+  });
+
+  const missingRedactionDocument = await request.post("/api/documents/redact", {
+    multipart: {},
+  });
+  expect(missingRedactionDocument.status()).toBe(400);
+  await expect(missingRedactionDocument.json()).resolves.toMatchObject({
+    error: "DOCUMENT_REQUIRED",
+  });
+
   await page.goto("/");
   await expect(page.getByRole("heading", { name: "Recover evidence from what remains" })).toBeVisible();
-  await expect(page.getByRole("link", { name: "Download the synthetic sample" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download the synthetic PDF sample" })).toBeVisible();
 });
 
 test("serves a prominently synthetic extraction sample", async ({ request }) => {
-  const response = await request.get("/samples/maya-travel-evidence.png");
+  const response = await request.get("/samples/maya-travel-evidence.pdf");
   expect(response.ok()).toBeTruthy();
-  expect(response.headers()["content-type"]).toContain("image/png");
+  expect(response.headers()["content-type"]).toContain("application/pdf");
   expect((await response.body()).byteLength).toBeGreaterThan(10_000);
 });
 
