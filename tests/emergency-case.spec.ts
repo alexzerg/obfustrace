@@ -3,6 +3,15 @@ import { buildEmergencyCase } from "../src/lib/case-model";
 import { parseEvidenceText } from "../src/lib/evidence-parser";
 import { mapNutrientFailure } from "../src/lib/nutrient-errors";
 
+async function startDemoIncident(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Find official recovery procedure" }).click();
+}
+
+async function openCompletedSharingPreview(page: import("@playwright/test").Page) {
+  await page.getByRole("button", { name: "Preview completed synthetic case" }).click();
+  await page.getByText("Secondary: inspect purpose-bound evidence sharing controls").click();
+}
+
 test("maps exhausted Nutrient credits to an actionable domain error", () => {
   expect(mapNutrientFailure(402, "extraction", "upstream failure")).toEqual({
     status: 402,
@@ -120,7 +129,7 @@ test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) 
 
   await expect(page.getByRole("heading", { name: "A temporary embassy, built around you." })).toBeVisible();
   await expect(page.getByText("Post-incident identity recovery")).toBeVisible();
-  await expect(page.getByText("Not a travel planner.", { exact: false })).toBeVisible();
+  await expect(page.getByText("Not a document viewer.", { exact: false })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Start with an empty emergency case" })).toBeVisible();
   await expect(page.getByRole("heading", { name: "Maya Laurent's temporary embassy" })).toHaveCount(0);
 });
@@ -159,6 +168,7 @@ test("exposes an honest Nutrient readiness and upload contract", async ({ page, 
   });
 
   await page.goto("/");
+  await startDemoIncident(page);
   await expect(page.getByRole("heading", { name: "Recover evidence from what remains" })).toBeVisible();
   await expect(page.getByRole("link", { name: "1. Download passport" })).toBeVisible();
 });
@@ -183,6 +193,7 @@ test("offers separate passport, flight, and hotel evidence sources", async ({ pa
   }
 
   await page.goto("/");
+  await startDemoIncident(page);
   await expect(page.getByRole("link", { name: "1. Download passport" })).toBeVisible();
   await expect(page.getByRole("link", { name: "2. Download flight itinerary" })).toBeVisible();
   await expect(page.getByRole("link", { name: "3. Download hotel confirmation" })).toBeVisible();
@@ -191,6 +202,7 @@ test("offers separate passport, flight, and hotel evidence sources", async ({ pa
 
 test("explains file selection and supports office documents", async ({ page }) => {
   await page.goto("/");
+  await startDemoIncident(page);
 
   await expect(page.getByRole("button", { name: "Choose a document first" })).toBeDisabled();
 
@@ -210,10 +222,27 @@ test("explains file selection and supports office documents", async ({ page }) =
   await expect(page.getByRole("button", { name: "Try Nutrient DWS" })).toBeDisabled();
 });
 
+test("shows official recovery actions without claiming submission", async ({ page }) => {
+  await page.goto("/");
+  await page.getByRole("button", { name: "Preview completed synthetic case" }).click();
+
+  await expect(page.getByRole("heading", { name: "From lost documents to official next actions" })).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Consulat général de France à Barcelone" })).toBeVisible();
+  await expect(page.getByText("NOT SUBMITTED", { exact: true })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Open official contact channel" })).toHaveAttribute(
+    "href",
+    "https://es.diplomatie.gouv.fr/fr/contact",
+  );
+  await expect(
+    page.getByRole("textbox", { name: "Prepared consular contact message" }),
+  ).toHaveValue(/Maya Laurent/);
+  await expect(page.getByText("No submission receipt or acknowledgement recorded")).toBeVisible();
+});
+
 test("switches to a purpose-bound airline view", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Preview completed synthetic case" }).click();
+  await openCompletedSharingPreview(page);
   await expect(page.getByLabel("Source docs: 3")).toBeVisible();
   await expect(page.getByLabel("Reviewed fields: 13")).toBeVisible();
   await expect(page.getByLabel("Recipient links: 4")).toBeVisible();
@@ -221,7 +250,7 @@ test("switches to a purpose-bound airline view", async ({ page }) => {
 
   await expect(page.getByRole("heading", { name: "Air France Assistance" })).toBeVisible();
   await expect(page.getByText("Booking reference")).toBeVisible();
-  await expect(page.getByText("K8R4NQ")).toBeVisible();
+  await expect(page.getByText("K8R4NQ", { exact: true })).toBeVisible();
   await expect(page.getByText("Passport number", { exact: true })).toBeVisible();
   await expect(page.getByText("Protected evidence")).toBeVisible();
 });
@@ -229,7 +258,7 @@ test("switches to a purpose-bound airline view", async ({ page }) => {
 test("revokes and reissues recipient access", async ({ page }) => {
   await page.goto("/");
 
-  await page.getByRole("button", { name: "Preview completed synthetic case" }).click();
+  await openCompletedSharingPreview(page);
   await page.getByRole("button", { name: "Revoke access" }).click();
   await expect(page.getByRole("heading", { name: "This recipient can no longer open the case" })).toBeVisible();
   await expect(page.getByText("Link revoked")).toBeVisible();

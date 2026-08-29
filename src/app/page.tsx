@@ -3,18 +3,18 @@ import { EmergencyDemo } from "./emergency-demo";
 const principles = [
   {
     number: "01",
-    title: "Recover what remains",
-    copy: "Turn scattered screenshots, reservations, and document copies into one structured emergency case.",
+    title: "Report the incident",
+    copy: "Tell Micro-Embassy what was lost, where you are, and when you need to travel.",
   },
   {
     number: "02",
-    title: "Disclose the minimum",
-    copy: "Give every organization a purpose-bound view instead of emailing the same passport scan everywhere.",
+    title: "Match the official procedure",
+    copy: "Locate the competent authority using curated government sources — never invented AI contacts.",
   },
   {
     number: "03",
-    title: "Disappear on purpose",
-    copy: "Expire links, revoke access instantly, and destroy the temporary portal when the crisis is resolved.",
+    title: "Prepare and prove each action",
+    copy: "Build the required message and evidence package, then track prepared, opened, submitted, and acknowledged as different states.",
   },
 ];
 
@@ -45,7 +45,7 @@ export default function Home() {
             A temporary embassy, built around you.
           </h1>
           <p className="mt-7 max-w-2xl text-pretty text-lg leading-8 text-slate-600 sm:text-xl">
-            Lose your documents abroad without losing control of your identity. Micro-Embassy gives police, hotels, airlines, and consulates only the evidence they need — then disappears.
+            Lose your documents abroad without losing the next step. Micro-Embassy finds the official recovery procedure, prepares the required actions from reviewed evidence, and never claims submission without proof.
           </p>
           <div className="mt-9 flex flex-col gap-3 sm:flex-row">
             <a href="#start" className="inline-flex min-h-12 items-center justify-center rounded-full bg-slate-950 px-6 text-sm font-bold text-white transition hover:bg-slate-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-slate-950">
@@ -79,7 +79,7 @@ export default function Home() {
         <div className="mx-auto grid w-full max-w-[1440px] gap-8 px-5 py-12 sm:px-8 md:grid-cols-[1fr_auto] md:items-end lg:px-10">
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-300">Ephemeral trust infrastructure</p>
-            <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">Not a travel planner. A bridge through the moment your normal identity system fails.</h2>
+            <h2 className="mt-3 max-w-3xl text-3xl font-semibold tracking-tight sm:text-4xl">Not a document viewer. An action plan from loss to official recovery.</h2>
           </div>
           <p className="max-w-sm text-sm leading-6 text-slate-400 md:text-right">Recover → organize → disclose minimally → sign → resolve → revoke → destroy.</p>
         </div>

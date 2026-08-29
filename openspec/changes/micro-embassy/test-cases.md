@@ -1,35 +1,48 @@
 # Micro-Embassy Test Cases
 
-## Scenario: Visitor understands the product boundary
+## Scenario: Traveler reports an incident
 
 Given the home page is loaded
-When the visitor reads the hero and case header
-Then the page explains that Micro-Embassy is post-incident infrastructure
-And it does not present itinerary or travel-planning features
+When the traveler enters nationality, location, loss date, and planned departure
+Then evidence upload appears only after the incident is recorded
 
-## Scenario: Recipient views disclose different evidence
+## Scenario: Official recovery route is matched
 
-Given the synthetic emergency case is open
-When the traveler selects Police and then Airline
-Then the visible shared fields differ
-And hidden fields are explicitly represented as protected
+Given the traveler is French and currently in Barcelona
+When a reviewed case is created
+Then the Recovery Action Board identifies the French Consulate General in Barcelona
+And every procedural claim links to an official government source
 
-## Scenario: Traveler revokes access
+## Scenario: Preparation is not presented as submission
 
-Given the selected recipient link is active
-When the traveler presses Revoke access
-Then the recipient status becomes Revoked
-And the preview reports that the link can no longer be opened
+Given the action board is open
+Then the overall state is Not submitted
+And copying the prepared contact message does not change the state to Sent or Delivered
+And no acknowledgement is claimed without a reference
 
-## Scenario: Traveler reissues access
+## Scenario: Different people cannot share one case
 
-Given the selected recipient link is revoked
-When the traveler presses Reissue for 30 min
-Then the status becomes Active
-And the expiration is reset to 30 minutes
+Given one document is confirmed for Maya Laurent
+And another is confirmed for Maria Ivanova
+Then Micro-Embassy reports an identity conflict
+And case creation remains disabled
+
+## Scenario: Recipient links require explicit authorization
+
+Given two reviewed documents belong to the same traveler
+When only Police and Airline are selected
+Then the dashboard contains exactly two recipient links
+And Consulate and Hotel links are absent
+
+## Scenario: Purpose-bound evidence remains secondary
+
+Given the Recovery Action Board is open
+When the traveler expands evidence sharing controls
+Then selected recipients receive different allowlisted views
+And hidden fields remain protected
 
 ## Scenario: Mobile layout remains usable
 
 Given a viewport width of 390 pixels
-When the dashboard is loaded
-Then recipient controls and the primary action remain visible without horizontal scrolling
+When the incident, evidence, and action-board stages are opened
+Then primary actions remain visible without horizontal scrolling

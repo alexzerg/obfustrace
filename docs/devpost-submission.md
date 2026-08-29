@@ -8,9 +8,9 @@ Micro-Embassy
 
 Ephemeral Trust Infrastructure for Travelers
 
-## Pitch (177/200 characters)
+## Pitch (186/200 characters)
 
-Micro-Embassy creates a temporary, secure identity portal for travelers who lose documents abroad, sharing only the right evidence with police, hotels, airlines, and consulates.
+Micro-Embassy turns lost travel documents into an official recovery plan: verified authority, required steps, prepared contact message, reviewed evidence, and honest submission tracking.
 
 ## Built with
 
@@ -45,4 +45,4 @@ Private browser OCR is the default free path and keeps PDF/image processing on t
 
 ## Product boundary
 
-Micro-Embassy activates after a traveler loses critical documents abroad. It creates a temporary portal, exposes a different minimum-disclosure view to every organization, supports immediate revocation, and is designed to be destroyed after the incident is resolved.
+Micro-Embassy activates after a traveler loses critical documents abroad. It matches a curated official recovery procedure, prepares the contact message and evidence package, and distinguishes prepared, opened, submitted, acknowledged, and accepted states. It never replaces an official authority or claims delivery without evidence. Purpose-bound disclosure remains a secondary privacy capability.

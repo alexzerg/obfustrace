@@ -3,14 +3,18 @@
 import { useState } from "react";
 import { DEMO_CASE_DATA } from "@/lib/case-model";
 import type { EmergencyCaseData } from "@/lib/case-model";
+import { DEMO_INCIDENT } from "@/lib/recovery-plan";
+import type { IncidentData } from "@/lib/recovery-plan";
 import { useHydrated } from "@/lib/use-hydrated";
-import { CaseDashboard } from "./case-dashboard";
 import { DocumentIntake } from "./document-intake";
+import { IncidentIntake } from "./incident-intake";
+import { RecoveryActionBoard } from "./recovery-action-board";
 
-const steps = ["Upload evidence", "Review extraction", "Create packages", "Manage access"];
+const steps = ["Report incident", "Review evidence", "Prepare official actions", "Track outcome"];
 
 export function EmergencyDemo() {
   const isHydrated = useHydrated();
+  const [incidentData, setIncidentData] = useState<IncidentData | null>(null);
   const [caseData, setCaseData] = useState<EmergencyCaseData | null>(null);
   const caseActive = Boolean(caseData);
 
@@ -21,17 +25,31 @@ export function EmergencyDemo() {
           <div>
             <p className="text-xs font-bold uppercase tracking-[0.18em] text-teal-700">Guided demo</p>
             <h2 className="mt-1 text-xl font-semibold tracking-tight text-slate-950">
-              {caseActive ? "Temporary embassy active" : "Start with an empty emergency case"}
+              {caseActive
+                ? "Official recovery actions prepared"
+                : incidentData
+                  ? "Official route matched — add reviewed evidence"
+                  : "Start with an empty emergency case"}
             </h2>
             <p className="mt-1 text-sm leading-6 text-slate-600">
               {caseActive
-                ? "The dashboard now represents the case created from reviewed evidence."
-                : "Upload a document and complete the review, or preview the finished synthetic case without calling an API."}
+                ? "The action board shows what is prepared, what official channel to use, and what still lacks submission evidence."
+                : incidentData
+                  ? `Recovery route: ${incidentData.nationality} traveler in ${incidentData.currentCity}, ${incidentData.currentCountry}.`
+                  : "Describe the incident first, or preview the complete synthetic recovery flow without calling an API."}
             </p>
           </div>
           <button
             type="button"
-            onClick={() => setCaseData((current) => (current ? null : DEMO_CASE_DATA))}
+            onClick={() => {
+              if (caseData) {
+                setCaseData(null);
+                setIncidentData(null);
+              } else {
+                setIncidentData(DEMO_INCIDENT);
+                setCaseData(DEMO_CASE_DATA);
+              }
+            }}
             disabled={!isHydrated}
             className="inline-flex min-h-11 shrink-0 items-center justify-center rounded-full border border-slate-300 bg-white px-5 text-sm font-bold text-slate-800 transition hover:border-teal-600 hover:text-teal-800 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-teal-700 disabled:cursor-wait disabled:opacity-70"
           >
@@ -41,7 +59,7 @@ export function EmergencyDemo() {
 
         <ol className="mt-4 grid grid-cols-2 gap-2 sm:grid-cols-4" aria-label="Emergency case progress">
           {steps.map((step, index) => {
-            const complete = caseActive || index === 0;
+            const complete = caseActive || (incidentData ? index <= 1 : index === 0);
             return (
               <li key={step} className={`rounded-xl border px-3 py-2 text-xs font-semibold ${complete ? "border-teal-200 bg-teal-50 text-teal-800" : "border-slate-200 bg-white/60 text-slate-400"}`}>
                 <span className="mr-2 font-mono">{index + 1}</span>{step}
@@ -51,8 +69,11 @@ export function EmergencyDemo() {
         </ol>
       </div>
 
-      {!caseActive ? <DocumentIntake onCaseCreated={setCaseData} /> : null}
-      {caseData ? <CaseDashboard caseData={caseData} /> : null}
+      {!incidentData && !caseData ? <IncidentIntake onContinue={setIncidentData} /> : null}
+      {incidentData && !caseData ? <DocumentIntake onCaseCreated={setCaseData} /> : null}
+      {incidentData && caseData ? (
+        <RecoveryActionBoard caseData={caseData} incident={incidentData} />
+      ) : null}
     </section>
   );
 }

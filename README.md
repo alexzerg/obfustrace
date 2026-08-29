@@ -1,17 +1,23 @@
 # Micro-Embassy
 
-**Ephemeral trust infrastructure for travelers who lose their documents abroad.**
+**Official recovery actions for travelers who lose their documents abroad.**
 
-Micro-Embassy activates after a crisis. It turns scattered synthetic evidence into a temporary emergency case and gives police, hotels, airlines, and consulates different minimum-disclosure views. Every link expires, can be revoked, and belongs to a case designed to be destroyed when the incident is resolved.
+Micro-Embassy turns a document-loss incident into a sourced action plan. It reviews available evidence, identifies the competent official authority from curated government sources, prepares the contact message and supporting package, and tracks prepared, opened, submitted, and acknowledged as different states. Purpose-bound disclosure remains a secondary privacy layer.
 
 **Live demo:** [micro-embassy.vercel.app](https://micro-embassy.vercel.app)
 
 ## Product boundaries
 
-Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wallet, or government identity provider. The hackathon MVP demonstrates post-incident recovery, purpose-bound disclosure, expiration, revocation, and an auditable case lifecycle.
+Micro-Embassy is not a travel planner, permanent digital wallet, government identity provider, or replacement for an official consular channel. It never labels an action sent, delivered, acknowledged, or accepted without corresponding evidence. Scans help prepare a recovery case but do not replace originals required by an authority.
 
 ## Current vertical slice
 
+- Incident intake for nationality, current location, lost item, incident date, and planned departure
+- Curated France-in-Barcelona recovery procedure grounded in official sources
+- Competent authority details, emergency phone, address, hours, and official contact channel
+- Recovery Action Board with honest Prepared, Opened, User-confirmed, and Not Submitted states
+- Prepared consular contact message generated from reviewed case facts
+- User-provided official reference tracking without claiming independent verification
 - Empty-state guided workflow instead of a preloaded case
 - Visible file selection, validation, size, and MIME feedback
 - PDF, DOC, DOCX, JPEG, PNG, TIFF, and WebP extraction support
@@ -59,7 +65,7 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright covers provider readiness, upload error handling, role switching, revocation, reissue, and desktop/mobile layouts.
+Playwright covers official recovery sourcing, submission-truth states, provider readiness, upload error handling, identity conflicts, selected recipients, role switching, revocation, reissue, and desktop/mobile layouts.
 
 ## Nutrient DWS
 
