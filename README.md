@@ -17,29 +17,39 @@ Micro-Embassy is not a travel planner, itinerary assistant, permanent digital wa
 - Different allowlisted and protected fields per role
 - Interactive revoke and 30-minute reissue controls
 - Explicit case-destruction lifecycle
-- No real identity data or external credentials
+- Server-only Nutrient DWS extraction boundary
+- Downloadable synthetic travel-evidence sample
+- No real identity data or committed credentials
 
 ## Run locally
 
 ```bash
 npm install
+cp .env.example .env.local
 npm run dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000).
+Open [http://localhost:3000](http://localhost:3000). Real extraction requires a private `NUTRIENT_DWS_API_KEY`; without it, the UI remains honest and reports that the provider is not configured.
 
 ## Quality gates
 
 ```bash
 npm run lint
 npm run build
+npm run test:e2e
 ```
 
-Playwright coverage will validate the role-switching, revocation, reissue, and mobile flows.
+Playwright covers provider readiness, upload error handling, role switching, revocation, reissue, and desktop/mobile layouts.
+
+## Nutrient DWS
+
+`POST /api/documents/extract` validates a temporary upload and forwards it to Nutrient DWS using a server-only Bearer key. The app requests deterministic JSON content with key-value pairs, plain text, and structured text. Without the key, the route returns `NUTRIENT_NOT_CONFIGURED`; it never substitutes synthetic output for a sponsor response.
+
+See [`docs/integrations/nutrient-dws.md`](docs/integrations/nutrient-dws.md) for the contract and setup.
 
 ## Planned integrations
 
-The architecture is prepared for server-side document extraction and redaction, official-source discovery, PDF assembly, e-signature, and temporary DNS. Integrations will only be listed as complete after they run in the demo with real API calls.
+Document redaction, human review, PDF assembly, e-signature, and persistent expiring links remain planned. Integrations will only be listed as complete after they run in the demo with real API calls.
 
 ## Safety
 

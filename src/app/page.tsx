@@ -1,4 +1,5 @@
 import { CaseDashboard } from "./case-dashboard";
+import { DocumentIntake } from "./document-intake";
 
 const principles = [
   {
@@ -73,6 +74,7 @@ export default function Home() {
         </aside>
       </section>
 
+      <DocumentIntake />
       <CaseDashboard />
 
       <section className="border-t border-slate-300/70 bg-slate-950 text-white">

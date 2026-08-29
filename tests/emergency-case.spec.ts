@@ -8,6 +8,35 @@ test("presents Micro-Embassy as post-incident infrastructure", async ({ page }) 
   await expect(page.getByText("Not a travel planner.", { exact: false })).toBeVisible();
 });
 
+test("exposes an honest Nutrient readiness and upload contract", async ({ page, request }) => {
+  const statusResponse = await request.get("/api/documents/extract");
+  expect(statusResponse.ok()).toBeTruthy();
+  await expect(statusResponse.json()).resolves.toMatchObject({
+    provider: "nutrient-dws",
+    operation: "json-content-extraction",
+    maxFileSizeBytes: 10 * 1024 * 1024,
+  });
+
+  const missingDocumentResponse = await request.post("/api/documents/extract", {
+    multipart: {},
+  });
+  expect(missingDocumentResponse.status()).toBe(400);
+  await expect(missingDocumentResponse.json()).resolves.toMatchObject({
+    error: "DOCUMENT_REQUIRED",
+  });
+
+  await page.goto("/");
+  await expect(page.getByRole("heading", { name: "Recover evidence from what remains" })).toBeVisible();
+  await expect(page.getByRole("link", { name: "Download the synthetic sample" })).toBeVisible();
+});
+
+test("serves a prominently synthetic extraction sample", async ({ request }) => {
+  const response = await request.get("/samples/maya-travel-evidence.png");
+  expect(response.ok()).toBeTruthy();
+  expect(response.headers()["content-type"]).toContain("image/png");
+  expect((await response.body()).byteLength).toBeGreaterThan(10_000);
+});
+
 test("switches to a purpose-bound airline view", async ({ page }) => {
   await page.goto("/");
 
