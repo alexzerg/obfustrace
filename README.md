@@ -27,7 +27,7 @@ Open [http://localhost:3000](http://localhost:3000).
 4. Click **Approve and execute minimal payload**.
 5. Inspect the rebooking confirmation and exact list of transmitted fields.
 
-The target is a synthetic airline API implemented at `POST /api/demo-airline/rebook`. `?dryRun=true` validates candidate payloads without executing the action. The final approved request performs one synthetic rebooking and returns a deterministic receipt.
+Production calls an independently deployed synthetic airline API at `https://minpayload-target-api.vercel.app/api/rebook`. Its source is published at [alexzerg/minpayload-target-api](https://github.com/alexzerg/minpayload-target-api). `?dryRun=true` validates candidate payloads without executing the action. The final approved request performs one synthetic rebooking and returns a deterministic receipt. The internal `/api/demo-airline/rebook` route remains only as a local and test fallback.
 
 ## Verified result
 
@@ -51,4 +51,4 @@ Playwright validates the minimization algorithm, insufficient and sufficient dry
 
 ## Boundaries
 
-The included airline API and traveler data are synthetic. MinPayload does not claim a real flight was changed. The prototype proves the minimization and execution-control mechanism that can sit in front of a real API gateway or agent tool call.
+The external airline API and traveler data are synthetic. MinPayload does not claim a real flight was changed. Separating the minimizer and target deployments proves that the approved minimum payload crosses a real network boundary. The same mechanism can sit in front of a production API gateway or agent tool call.

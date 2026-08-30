@@ -13,6 +13,12 @@ import type {
 } from "@/lib/minpayload";
 import { useHydrated } from "@/lib/use-hydrated";
 
+const TARGET_API_URL =
+  process.env.NEXT_PUBLIC_TARGET_API_URL ?? "/api/demo-airline/rebook";
+const TARGET_API_LABEL = TARGET_API_URL.startsWith("https://")
+  ? new URL(TARGET_API_URL).host
+  : "Local synthetic API fallback";
+
 type ExecutionReceipt = {
   status: string;
   confirmation: string;
@@ -36,7 +42,7 @@ export function MinPayloadDemo() {
   );
 
   async function validatePayload(payload: Record<string, string>) {
-    const response = await fetch("/api/demo-airline/rebook?dryRun=true", {
+    const response = await fetch(`${TARGET_API_URL}?dryRun=true`, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -73,7 +79,7 @@ export function MinPayloadDemo() {
 
   async function executeMinimalPayload() {
     setError("");
-    const response = await fetch("/api/demo-airline/rebook", {
+    const response = await fetch(TARGET_API_URL, {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(finalPayload),
@@ -113,7 +119,7 @@ export function MinPayloadDemo() {
           <p className="text-xs font-bold uppercase tracking-[0.16em] text-lime-700">Requested action</p>
           <h2 className="mt-3 text-2xl font-semibold">Rebook AF1249 to 1 September</h2>
           <dl className="mt-6 space-y-4 text-sm">
-            <Row label="Target" value="Synthetic Airline API" />
+            <Row label="Target" value={TARGET_API_LABEL} />
             <Row label="Method" value="POST /rebook" />
             <Row label="Starting context" value={`${DEMO_PAYLOAD_FIELDS.length} fields from 3 sources`} />
             <Row label="Approval" value="Required before execution" />
