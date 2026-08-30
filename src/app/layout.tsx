@@ -13,9 +13,9 @@ const geistMono = Geist_Mono({
 });
 
 export const metadata: Metadata = {
-  title: "MinPayload | Empirical data minimization for AI agents",
+  title: "ObfusTrace | Safe production traces for AI debugging",
   description:
-    "Find the smallest personal-data payload that still completes an AI agent API action, then execute it with an auditable receipt.",
+    "Create a format-preserving synthetic twin of a production error before sharing it with AI, Jira, Slack, GitHub, or vendor support.",
 };
 
 export default function RootLayout({ children }: LayoutProps<"/">) {

@@ -1,14 +1,19 @@
-# MinPayload
+# ObfusTrace
 
-**Empirical data minimization for AI-agent API actions.**
+**Debug-equivalent synthetic traces for safe AI and support sharing.**
 
-MinPayload finds the smallest set of personal fields an AI agent needs to complete an action. It removes one field at a time, tests each candidate against the target API's dry-run contract, keeps only removals that still succeed, requests human approval, executes the minimum payload, and produces an audit receipt.
+ObfusTrace turns a production error, stack trace, log excerpt, or configuration fragment into a safe synthetic twin before it is pasted into AI, Jira, Slack, GitHub, or vendor support.
 
-## Why
+It does more than replace values with `[REDACTED]`:
 
-Static allowlists guess what an API needs. MinPayload proves it experimentally.
+- repeated originals receive stable aliases;
+- IPs, ARNs, UUIDs, emails, URLs, JWTs, and credentials retain useful structure;
+- line count and stack-frame count remain unchanged;
+- a structural fingerprint proves diagnostic equivalence;
+- a second scan must find zero residual sensitive values before Copy is enabled;
+- AI responses containing aliases can be rehydrated locally.
 
-For the included flight-rebooking scenario, an agent starts with eight fields from passport, flight, hotel, and user-request context. MinPayload executes eight dry-run requests and determines that passport number, date of birth, nationality, and hotel are unnecessary. The final execution sends only passenger name, booking reference, current flight, and requested date.
+Raw traces and the mapping vault never leave the browser.
 
 ## Run locally
 
@@ -19,25 +24,28 @@ npm run dev
 
 Open [http://localhost:3000](http://localhost:3000).
 
-## Executable demo
+## Demo
 
-1. Click **Run payload minimization**.
-2. Inspect each field-removal experiment and its actual API status.
-3. Review the minimum successful JSON payload.
-4. Click **Approve and execute minimal payload**.
-5. Inspect the rebooking confirmation and exact list of transmitted fields.
+1. Inspect the included synthetic production failure.
+2. Click **Create safe trace twin**.
+3. Review detected categories and stable synthetic aliases.
+4. Confirm the sanitization certificate is `CLEAN`.
+5. Copy the safe trace for external debugging.
+6. Paste an AI response containing aliases and click **Rehydrate locally**.
 
-Production calls an independently deployed synthetic airline API at `https://minpayload-target-api.vercel.app/api/rebook`. Its source is published at [alexzerg/minpayload-target-api](https://github.com/alexzerg/minpayload-target-api). `?dryRun=true` validates candidate payloads without executing the action. The final approved request performs one synthetic rebooking and returns a deterministic receipt. The internal `/api/demo-airline/rebook` route remains only as a local and test fallback.
+## Sample protection
 
-## Verified result
+The bundled trace includes a synthetic JWT, Bearer header, AWS access key, AWS ARN/account, database username/password, customer email, UUID, internal hostname, partner hostname, and repeated private IP.
 
-- Starting context: 8 fields
-- Dry-run experiments: 8
-- Minimum payload: 4 fields
-- Data reduction: 50%
-- Blocked: passport number, date of birth, nationality, hotel
-- Executed action: rebook `AF1249` to `AF1449`
-- Confirmation: deterministic `REBOOK-*` receipt
+Expected output:
+
+- 10 unique sensitive values protected;
+- repeated IP maps consistently to `192.0.2.1`;
+- email maps to `user1@example.invalid`;
+- stack frames and line count remain unchanged;
+- residual findings equal zero;
+- copy gate becomes enabled;
+- local rehydration restores original values.
 
 ## Quality gates
 
@@ -47,8 +55,8 @@ npm run build
 npm run test:e2e
 ```
 
-Playwright validates the minimization algorithm, insufficient and sufficient dry-run payloads, final API execution, audit receipt, responsive layout, and exact absence of sensitive fields from the execution request.
+Playwright validates detection, stable aliasing, residual scanning, diagnostic fingerprint preservation, copy gating, reversible local mapping, and mobile behavior.
 
 ## Boundaries
 
-The external airline API and traveler data are synthetic. MinPayload does not claim a real flight was changed. Separating the minimizer and target deployments proves that the approved minimum payload crosses a real network boundary. The same mechanism can sit in front of a production API gateway or agent tool call.
+ObfusTrace reduces accidental disclosure risk; it is not a guarantee that arbitrary text contains no sensitive business information. High-risk organizations should combine it with existing secret scanning, DLP policy, and human review. The sample data is synthetic.

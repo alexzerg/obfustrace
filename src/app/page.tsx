@@ -1,5 +1,5 @@
-import { MinPayloadDemo } from "./minpayload-demo";
+import { ObfusTraceDemo } from "./obfustrace-demo";
 
 export default function Home() {
-  return <MinPayloadDemo />;
+  return <ObfusTraceDemo />;
 }

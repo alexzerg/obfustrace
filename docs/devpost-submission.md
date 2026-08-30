@@ -1,16 +1,16 @@
-# MinPayload — Devpost Submission Metadata
+# ObfusTrace — Devpost Submission Metadata
 
 ## Project name
 
-MinPayload
+ObfusTrace
 
 ## Subtitle
 
-Empirical Data Minimization for AI Agents
+Debug-Equivalent Synthetic Traces for Safe AI Sharing
 
-## Pitch (185/200 characters)
+## Pitch (182/200 characters)
 
-MinPayload experimentally removes personal fields from an AI agent's API call, finds the smallest payload that still succeeds, executes it with approval, and proves what stayed private.
+ObfusTrace creates a debug-equivalent synthetic twin of production logs, preserving stack structure while replacing credentials and infrastructure identifiers before sharing with AI.
 
 ## Built with
 
@@ -20,11 +20,11 @@ MinPayload experimentally removes personal fields from an AI agent's API call, f
 - Tailwind CSS
 - Node.js
 - Playwright
-- REST API
-- AI Agents
-- API Security
-- Data Minimization
-- Human-in-the-Loop
+- Local-First
+- Secret Detection
+- Format-Preserving Obfuscation
+- Data Loss Prevention
+- Privacy Engineering
 - GitHub
 - Vercel
 - Responsive Design
@@ -32,10 +32,10 @@ MinPayload experimentally removes personal fields from an AI agent's API call, f
 
 ## Try it out
 
-- Source code: https://github.com/alexzerg/minpayload
-- Live demo: https://minpayload.vercel.app
+- Source code: https://github.com/alexzerg/obfustrace
+- Live demo: https://obfustrace.vercel.app
 - Demo video: not recorded yet
 
 ## Product boundary
 
-The airline API, traveler context, and rebooking result are synthetic. The prototype demonstrates a real sequence of HTTP dry-run experiments, human approval, minimum-payload execution, and an auditable receipt. It does not claim that a real airline reservation was changed.
+The sample trace and credentials are synthetic. ObfusTrace performs all sanitization and rehydration locally in the browser. It reduces accidental disclosure risk but does not guarantee that arbitrary text contains no sensitive business information; residual scanning and human review remain mandatory.
